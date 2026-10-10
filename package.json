@@ -2,7 +2,7 @@
   "name": "new-music-every-friday",
   "version": "1.0.0",
   "private": true,
-  "description": "new music every friday: a 90s download-dialog countdown and a shared guestbook canvas",
+  "description": "new music every friday. one song a week for 12 weeks, album out jan 1st.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

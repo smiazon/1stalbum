@@ -225,7 +225,23 @@ const SONGS = [
 ].map((s) => ({ ...s, t: new Date(s.at).getTime() }));
 const STARTED = new Date('2026-10-09T00:00:00-04:00').getTime();   // week one began
 
+// The guestbook lives in Supabase (see supabase.sql). Paste the project URL and the anon / publishable key.
+// Both are meant to be public: visitors can only do what the functions in supabase.sql allow.
+const BACKEND = {
+  url: '',            // e.g. 'https://abcdefgh.supabase.co'
+  key: '',            // the project's anon / publishable key
+};
+const SIGNING = { opens: '2026-10-09T00:00:00-04:00', closes: '2027-01-01T00:00:00-05:00' };   // keep in step with supabase.sql
+
 const $ = (id) => document.getElementById(id);
+const online = () => !!(BACKEND.url && BACKEND.key);
+const headers = () => ({ apikey: BACKEND.key, Authorization: `Bearer ${BACKEND.key}`, 'Content-Type': 'application/json' });
+async function rpc(fn, args = {}) {
+  const r = await fetch(`${BACKEND.url}/rest/v1/rpc/${fn}`, { method: 'POST', headers: headers(), body: JSON.stringify(args) });
+  const body = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(body?.message || 'something went wrong, try again');
+  return body;
+}
 let clockSkew = 0;                             // server time minus this device's time
 const now = () => Date.now() + clockSkew;
 
@@ -331,15 +347,16 @@ const me = Math.random().toString(36).slice(2);
 async function ping() {
   try {
     const sent = Date.now();
-    const r = await (await fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: me }) })).json();
+    if (!online()) return;
+    const r = await rpc('ping', { p_id: me });
     clockSkew = r.now - (sent + Date.now()) / 2;   // trust the server's clock, not this device's
     const others = r.peers - 1;
     peersText = others > 0 ? `${words(Math.min(others, 99))} ${others === 1 ? 'other is' : 'others are'} here with you.` : '';
     tick();
   } catch {}
 }
-fetch('/api/hit', { method: 'POST' }).then((r) => r.json())
-  .then(({ count }) => {
+if (online()) rpc('hit')
+  .then((count) => {
     // every visitor gets their own numbered copy
     $('serial').textContent = `no. ${String(count).padStart(7, '0')}`;
   })
@@ -353,10 +370,14 @@ if (ADMIN_KEY) {
   const link = document.createElement('button');
   link.className = 'link'; link.textContent = 'signers (csv)';
   link.onclick = async () => {
-    const r = await fetch('/api/signers.csv', { headers: { 'x-admin-key': ADMIN_KEY } });
-    if (!r.ok) return alert('could not load the list (check the admin key)');
+    let rows;
+    try { rows = await rpc('signers', { p_key: ADMIN_KEY }); } catch { return alert('could not load the list (check the admin key)'); }
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [['signed at', 'name', 'email or phone', 'still on the page']]
+      .concat(rows.map((r) => [r.signed_at, r.name, r.contact, r.still_on_page ? 'yes' : 'removed']))
+      .map((r) => r.map(cell).join(',')).join('\n');
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(await r.blob()); a.download = `signers-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `signers-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click(); URL.revokeObjectURL(a.href);
   };
   document.querySelector('header').append(link);
@@ -456,8 +477,8 @@ sleeve.addEventListener('click', async (e) => {
   if (ADMIN_KEY && id && !e.target.classList.contains('ghost')) {
     const s = entries.find((x) => x.id === id);
     if (!confirm(`remove "${s?.name}"?`)) return;
-    const r = await fetch('/api/signatures/' + id, { method: 'DELETE', headers: { 'x-admin-key': ADMIN_KEY } });
-    if (r.ok) { entries = entries.filter((x) => x.id !== id); render(); }
+    try { await rpc('remove_signature', { p_key: ADMIN_KEY, p_id: id }); entries = entries.filter((x) => x.id !== id); render(); }
+    catch (err) { msg.textContent = err.message; }
     return;
   }
   if ($('signForm').hidden) return;
@@ -475,14 +496,11 @@ $('signForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = e.target.querySelector('[type=submit]'); btn.disabled = true; msg.textContent = 'signing…';
   try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (ADMIN_KEY) headers['x-admin-key'] = ADMIN_KEY;   // our signature
-    const r = await fetch('/api/signatures', {
-      method: 'POST', headers,
-      body: JSON.stringify({ name: $('name').value, contact: $('contact').value, color: pick.color, x: pick.x, y: pick.y }),
-    });
-    const s = await r.json();
-    if (!r.ok) throw new Error(s.error);
+    if (!online()) throw new Error('the guestbook opens soon.');
+    const place = { p_name: $('name').value, p_color: pick.color, p_x: pick.x, p_y: pick.y };
+    const s = ADMIN_KEY
+      ? await rpc('artist_sign', { p_key: ADMIN_KEY, ...place })          // our signature
+      : await rpc('sign', { ...place, p_contact: $('contact').value });
     e.target.reset();
     pick.x = pick.y = null; drawGhost();
     entries.push(s); render(s.id);
@@ -495,12 +513,10 @@ $('signForm').addEventListener('submit', async (e) => {
 
 async function loadWindow() {
   try {
-    const [a, list] = await Promise.all([
-      fetch('/api/signing').then((r) => r.json()),
-      fetch('/api/signatures').then((r) => r.json()),
-    ]);
-    win = { opens: new Date(a.opens).getTime(), closes: new Date(a.closes).getTime() };
-    entries = list;
+    win = { opens: new Date(SIGNING.opens).getTime(), closes: new Date(SIGNING.closes).getTime() };
+    entries = online()
+      ? await (await fetch(`${BACKEND.url}/rest/v1/signatures?select=*&order=created_at.asc`, { headers: headers() })).json()
+      : [];
     render();
     tick();
   } catch {}
