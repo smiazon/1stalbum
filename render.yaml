@@ -1,0 +1,24 @@
+# One-click deploy on Render: https://render.com/deploy?repo=https://github.com/smiazon/1stalbum
+services:
+  - type: web
+    name: 1stalbum
+    runtime: node
+    plan: starter            # persistent disks need a paid instance; the free plan would wipe signatures on every restart
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATA_DIR
+        value: /var/data
+      - key: ADMIN_KEY       # your owner key; find it under Environment in the Render dashboard
+        generateValue: true
+      - key: SIGN_SALT
+        generateValue: true
+      - key: SITE_TZ
+        value: America/New_York
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

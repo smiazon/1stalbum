@@ -1,0 +1,11 @@
+signatures.json
+signers.json
+contacts.json
+hits.json
+*.tmp
+.salt
+.admin-key
+data/
+node_modules
+.DS_Store
+.claude/

@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>new music every friday</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&family=Caveat:wght@600&family=Reenie+Beanie&family=Rock+Salt&family=Homemade+Apple&family=Nothing+You+Could+Do&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
+  :root {
+    /* Iowan Old Style is the book face in Apple Books; Literata stands in elsewhere */
+    --book: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Literata', Georgia, serif;
+    --ink: #1d1d1f; --grey: #6e6e73; --faint: #c7c7cc; --hair: #e5e5ea; --blue: #0066cc;
+  }
+  body {
+    background: #fff; color: var(--ink);
+    font: 17px/1.47 var(--book);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+  }
+  .link { color: var(--blue); text-decoration: none; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
+  .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .link:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px; }
+  .link:disabled { color: #999; cursor: default; text-decoration: none; }
+
+  header, footer {
+    position: fixed; left: 24px; right: 24px; display: flex; justify-content: space-between; font-size: 14px; letter-spacing: .01em;
+  }
+  header { top: 16px; }
+  footer { bottom: 16px; color: var(--grey); }
+
+  main {
+    height: 100%; padding: 56px 24px;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 56px;
+    align-items: center; max-width: 1180px; margin: 0 auto;
+  }
+  .lead { font-size: clamp(24px, 3.3vw, 40px); line-height: 1.2; letter-spacing: -0.012em; margin: 0 0 24px; }
+  .line { height: 1px; background: var(--hair); margin: 0 0 12px; }
+  .line i { display: block; height: 1px; width: 0; background: var(--ink); }
+  .note { font-size: 14px; color: var(--grey); margin: 0; min-height: 21px; }
+  .concept { margin: 28px 0 24px; line-height: 1.55; }
+  
+  /* the twelve weeks: faint until their friday comes */
+  .weeks { display: flex; flex-wrap: wrap; gap: 4px 15px; margin: 0 0 16px; font-variant-numeric: lining-nums tabular-nums; }
+  .weeks span, .weeks button { font: inherit; padding: 0 0 1px; border: 0; background: none; color: var(--faint); }
+  .weeks .now { color: var(--ink); border-bottom: 1px solid var(--ink); }
+  .weeks button { color: var(--blue); cursor: pointer; }
+  .weeks button:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .weeks button.playing { color: var(--ink); border-bottom: 1px solid var(--ink); }
+
+  /* ---------- the blank square: empty, until everyone signs it ---------- */
+  .book { --size: min(520px, calc(100dvh - 260px), 44vw); width: var(--size); }
+  .book .cap { display: flex; justify-content: space-between; font-size: 14px; color: var(--grey); margin-bottom: 10px; }
+  .sleeve {
+    position: relative; width: var(--size); aspect-ratio: 1; container-type: inline-size;
+    overflow: hidden; cursor: crosshair; user-select: none; touch-action: manipulation;
+    background:
+      radial-gradient(120% 90% at 30% 20%, #fdfcf9, #f3f1ea 70%, #ebe8df),
+      #f5f3ed;
+    box-shadow: 0 0 0 1px #e2dfd6, 0 1px 2px rgba(0,0,0,.06), 0 22px 40px -18px rgba(0,0,0,.28);
+  }
+  /* board texture */
+  .sleeve::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; opacity: .55;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.16 0 0 0 .84  .16 0 0 0 .84  .16 0 0 0 .82  0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  /* blind emboss: pressed into the board, no ink */
+  .emboss {
+    position: absolute; pointer-events: none; color: #f1efe8; letter-spacing: .02em;
+    text-shadow: -1px -1px 0 rgba(0,0,0,.13), 1px 1px 0 rgba(255,255,255,.95);
+  }
+  .emboss.title { right: 7cqw; bottom: 9cqw; font: italic 3.6cqw var(--book); transform: rotate(-4deg); }
+  .emboss.serial { left: 6cqw; bottom: 6cqw; font: 2.6cqw 'Courier New', monospace; }
+
+  .sig { position: absolute; white-space: nowrap; line-height: 1; pointer-events: none; transform-origin: left center; opacity: .92; mix-blend-mode: multiply; }
+  .sig.artist { opacity: 1; }
+  .sig.new { animation: ink 1.2s ease-out; }
+  @keyframes ink { from { opacity: 0; filter: blur(2px); } }
+  .ghost { opacity: .45; pointer-events: auto; cursor: grab; touch-action: none; }
+  .ghost.dragging { cursor: grabbing; opacity: .75; }
+  .hint { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: #b8b5ad; font-style: italic; font-size: 3.6cqw; }
+  body.admin .sig:not(.ghost) { pointer-events: auto; cursor: not-allowed; }
+  body.admin .sig:not(.ghost):hover { outline: 1px dashed #b3261e; }
+
+  .signbar { display: flex; gap: 14px; align-items: flex-end; margin-top: 14px; }
+  .signbar input {
+    flex: 1; min-width: 0; font: 17px var(--book); padding: 3px 0;
+    border: 0; border-bottom: 1px solid var(--faint); border-radius: 0; outline: 0; background: transparent; color: var(--ink);
+  }
+  .signbar #name { flex: .7; } .signbar #contact { flex: 1.3; }
+  .signbar input::placeholder { color: #a1a1a6; }
+  .signbar input:focus { border-color: var(--blue); }
+  .pens { display: flex; gap: 6px; padding-bottom: 5px; }
+  .pens button { width: 14px; height: 14px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; }
+  .pens button.on { outline: 1px solid var(--ink); outline-offset: 2px; }
+  .msg { margin-top: 10px; font-size: 14px; font-style: italic; color: var(--grey); min-height: 20px; }
+  .signbar[hidden] { display: none; }
+
+  /* ---------- a track, before it exists: one quiet line ---------- */
+  .player {
+    position: relative; display: flex; align-items: center; gap: 14px;
+    padding: 10px 0; margin: 0 0 18px; border-bottom: 1px solid var(--hair);
+    font-size: 15px; color: var(--grey);
+  }
+  .player .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+  .sk { display: block; width: 46%; height: 8px; border-radius: 4px; background: #ececf0; position: relative; overflow: hidden; }
+  .sk::after {
+    content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
+    animation: shimmer 2.6s ease-in-out infinite;
+  }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+  /* play button: a soft pastel rainbow ring, slowly turning */
+  .pbtn {
+    position: relative; isolation: isolate; width: 30px; height: 30px; flex: none; padding: 0;
+    border: 0; border-radius: 50%; background: #fff; color: var(--ink); cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .pbtn::before, .pbtn::after {
+    content: ''; position: absolute; inset: -1px; border-radius: 50%; z-index: -1;
+    background: conic-gradient(#ffb3c6, #ffd6a5, #fdffb6, #caffbf, #9bf6ff, #a0c4ff, #bdb2ff, #ffc6ff, #ffb3c6);
+    animation: turn 7s linear infinite;
+  }
+  /* the ring itself */
+  .pbtn::before {
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+            mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  }
+  /* and its glow */
+  .pbtn::after { inset: -3px; filter: blur(6px); opacity: .45; z-index: -2; }
+  @keyframes turn { to { transform: rotate(1turn); } }
+  .pbtn:disabled { color: var(--faint); cursor: default; }
+  .pbtn:disabled::before { opacity: .7; }
+  .pbtn:disabled::after { opacity: .25; }
+  .pbtn:not(:disabled):hover::after { opacity: .7; }
+  .pbtn.on::before, .pbtn.on::after { animation-duration: 2.4s; }   /* turns faster while a song plays */
+  .pbtn svg { width: 10px; height: 10px; margin-left: 2px; }
+  .player .time { font-variant-numeric: tabular-nums; font-size: 14px; }
+  /* the hairline under it fills as the song plays */
+  .player .prog { position: absolute; left: 0; bottom: -1px; height: 1px; width: 0; background: var(--ink); }
+  @media (prefers-reduced-motion: reduce) { .sk::after, .pbtn::before, .pbtn::after { animation: none; } }
+
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); gap: 22px; align-content: center; padding: 50px 18px 44px; }
+    .lead { font-size: 22px; margin-bottom: 14px; }
+    .concept { margin: 14px 0 12px; font-size: 15px; }
+    .weeks { margin-bottom: 0; font-size: 15px; gap: 2px 11px; }
+    .note { display: none; }
+    .book { --size: min(calc(100vw - 36px), calc(100dvh - 530px)); width: 100%; }
+    .sleeve { margin: 0 auto; }
+    .book .cap { width: var(--size); margin-left: auto; margin-right: auto; }
+    .player { margin-bottom: 10px; }
+    footer { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span>new music every friday.</span>
+</header>
+
+<main>
+  <!-- the countdown, in words -->
+  <div class="text">
+    <p class="lead" id="lead">song one arrives in…</p>
+    <div class="line"><i id="bar"></i></div>
+    <p class="concept">i'm making and releasing one song a week for 12 weeks. album out jan 1st.</p>
+    <div class="player" id="player">
+      <button class="pbtn" id="pPlay" disabled aria-label="play">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg>
+      </button>
+      <span class="title" id="pTitle"><span class="sk"></span></span>
+      <span class="time" id="pLen">friday</span>
+      <i class="prog" id="pBar"></i>
+    </div>
+    <div class="weeks" id="weeks" aria-label="the twelve songs"></div>
+    <p class="note" id="note">&nbsp;</p>
+  </div>
+
+  <!-- the guestbook: a blank square everyone signs -->
+  <section class="book" aria-labelledby="sigCount">
+    <div class="cap"><span id="sigCount">no signatures yet</span><span id="week"></span></div>
+    <div class="sleeve" id="sleeve" role="img" aria-label="A blank white square, signed by visitors">
+      <span class="emboss title">new music every friday</span>
+      <span class="emboss serial" id="serial">no. 0000001</span>
+      <div class="hint" id="hint">tap anywhere to sign</div>
+    </div>
+    <form class="signbar" id="signForm" autocomplete="off">
+      <input id="name" maxlength="32" placeholder="name" required aria-label="your name">
+      <input id="contact" maxlength="80" placeholder="email or phone" required aria-label="email or phone, only we see it">
+      <div class="pens" id="pens" aria-label="pen"></div>
+      <button class="link" type="submit">sign</button>
+    </form>
+    <div class="msg" id="msg"></div>
+  </section>
+</main>
+
+<footer>
+  <span id="peers"></span>
+</footer>
+
+<audio id="audio" preload="none"></audio>
+
+<script>
+/* ---------------- the twelve fridays ---------------- */
+// One song a week, made that week. Each drops at midnight Eastern on its Friday.
+// When a song is finished, put the mp3 in public/tracks/ and set its src.
+const SONGS = [
+  { at: '2026-10-16T00:00:00-04:00', src: null },
+  { at: '2026-10-23T00:00:00-04:00', src: null },
+  { at: '2026-10-30T00:00:00-04:00', src: null },
+  { at: '2026-11-06T00:00:00-05:00', src: null },
+  { at: '2026-11-13T00:00:00-05:00', src: null },
+  { at: '2026-11-20T00:00:00-05:00', src: null },
+  { at: '2026-11-27T00:00:00-05:00', src: null },
+  { at: '2026-12-04T00:00:00-05:00', src: null },
+  { at: '2026-12-11T00:00:00-05:00', src: null },
+  { at: '2026-12-18T00:00:00-05:00', src: null },
+  { at: '2026-12-25T00:00:00-05:00', src: null },
+  { at: '2027-01-01T00:00:00-05:00', src: null },   // the last song, and the album
+].map((s) => ({ ...s, t: new Date(s.at).getTime() }));
+const STARTED = new Date('2026-10-09T00:00:00-04:00').getTime();   // week one began
+
+const $ = (id) => document.getElementById(id);
+let clockSkew = 0;                             // server time minus this device's time
+const now = () => Date.now() + clockSkew;
+
+/* ---------------- the countdown, spelled out ---------------- */
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+const words = (n) => n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+const part = (n, w) => `${words(n)} ${w}${n === 1 ? '' : 's'}`;
+function spelled(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const bits = [];
+  const d = Math.floor(s / 86400), h = Math.floor(s / 3600) % 24, m = Math.floor(s / 60) % 60, sec = s % 60;
+  if (d) bits.push(part(d, 'day'));
+  if (d || h) bits.push(part(h, 'hour'));
+  if (d || h || m) bits.push(part(m, 'minute'));
+  const last = part(sec, 'second');
+  return bits.length ? `${bits.join(', ')} and ${last}` : last;
+}
+
+let peersText = '', shown = -1;
+function tick() {
+  const t = now();
+  const out = SONGS.filter((s) => s.t <= t).length;            // songs released so far
+  if (out < SONGS.length) {
+    const next = SONGS[out], from = out ? SONGS[out - 1].t : STARTED;
+    const p = Math.min(1, Math.max(0, (t - from) / (next.t - from)));
+    $('bar').style.width = (p * 100).toFixed(3) + '%';         // how much of this week is gone
+    const what = out === SONGS.length - 1 ? 'song twelve and the album arrive' : `song ${words(out + 1)} arrives`;
+    $('lead').textContent = `${what} in ${spelled(next.t - t)}.`;
+  } else {
+    $('bar').style.width = '100%';
+    $('lead').textContent = 'twelve songs. the album is here.';
+  }
+  if (out !== shown) { drawWeeks(out); drawPlayer(out); shown = out; }
+  if (!noteHold) $('note').textContent = peersText;
+  windowTick(t);
+}
+
+// 01 to 12: released weeks play, this week is underlined, the rest wait
+function drawWeeks(out) {
+  const row = $('weeks'); row.innerHTML = '';
+  SONGS.forEach((s, i) => {
+    let el;
+    if (i < out) {
+      el = document.createElement('button');
+      el.title = `play song ${words(i + 1)}`;
+      el.onclick = () => play(i, el);
+    } else {
+      el = document.createElement('span');
+      if (i === out) { el.className = 'now'; el.title = 'being made this week'; }
+    }
+    el.textContent = String(i + 1).padStart(2, '0');
+    row.append(el);
+  });
+}
+
+// The player is an empty shell until a song is out; then it holds the newest one.
+function drawPlayer(out) {
+  const player = $('player');
+  if (!out) {
+    $('pPlay').disabled = true;
+    $('pLen').textContent = 'friday';
+    return;
+  }
+  const i = out - 1;
+  $('pTitle').textContent = `song ${words(i + 1)}`;
+  $('pLen').textContent = '';
+  $('pPlay').disabled = false;
+  $('pPlay').onclick = () => play(i, document.querySelectorAll('.weeks button')[i]);
+}
+const clock = (sec) => isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}` : '–:––';
+
+/* ---------------- play: no pause, only start over ---------------- */
+const audio = $('audio');
+let playingIdx = -1, noteHold = false;
+function play(i, el) {
+  const s = SONGS[i];
+  if (!s.src) {
+    noteHold = true; $('note').textContent = `song ${words(i + 1)} is almost up. refresh in a minute.`;
+    setTimeout(() => { noteHold = false; }, 4000);
+    return;
+  }
+  if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;
+  playingIdx = i;
+  $('pTitle').textContent = `song ${words(i + 1)}`;   // the player shows whichever week is playing
+  audio.play();
+  document.querySelectorAll('.weeks button').forEach((b) => b.classList.toggle('playing', b === el));
+  $('pPlay').classList.add('on');
+}
+audio.addEventListener('pause', () => { if (!audio.ended) audio.play().catch(() => {}); });
+audio.addEventListener('timeupdate', () => {
+  $('pLen').textContent = `${clock(audio.currentTime)} / ${clock(audio.duration)}`;
+  $('pBar').style.width = (audio.currentTime / audio.duration * 100 || 0) + '%';
+});
+audio.addEventListener('ended', () => {
+  document.querySelectorAll('.weeks button').forEach((b) => b.classList.remove('playing'));
+  $('pPlay').classList.remove('on');
+});
+
+/* ---------------- visitors ---------------- */
+const me = Math.random().toString(36).slice(2);
+async function ping() {
+  try {
+    const sent = Date.now();
+    const r = await (await fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: me }) })).json();
+    clockSkew = r.now - (sent + Date.now()) / 2;   // trust the server's clock, not this device's
+    const others = r.peers - 1;
+    peersText = others > 0 ? `${words(Math.min(others, 99))} ${others === 1 ? 'other is' : 'others are'} here with you.` : '';
+    tick();
+  } catch {}
+}
+fetch('/api/hit', { method: 'POST' }).then((r) => r.json())
+  .then(({ count }) => {
+    // every visitor gets their own numbered copy
+    $('serial').textContent = `no. ${String(count).padStart(7, '0')}`;
+  })
+  .catch(() => {});
+
+/* ---------------- the guestbook ---------------- */
+// Guests sign it for twelve weeks. Then it closes, and we sign it.
+const ADMIN_KEY = (location.hash.match(/admin=([\w-]+)/) || [])[1];   // owner: #admin=<ADMIN_KEY>
+if (ADMIN_KEY) {
+  document.body.classList.add('admin');
+  const link = document.createElement('button');
+  link.className = 'link'; link.textContent = 'signers (csv)';
+  link.onclick = async () => {
+    const r = await fetch('/api/signers.csv', { headers: { 'x-admin-key': ADMIN_KEY } });
+    if (!r.ok) return alert('could not load the list (check the admin key)');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(await r.blob()); a.download = `signers-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  document.querySelector('header').append(link);
+}
+const PENS = ['#1b1b1b', '#1d3b8f', '#b3261e'];
+const pick = { color: PENS[0], x: null, y: null };
+const sleeve = $('sleeve'), msg = $('msg');
+let win = null, entries = [];
+const WEEK = 7 * 86400000;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function windowTick(t) {
+  if (!win) return;
+  const closed = t >= win.closes;
+  const week = clamp(Math.floor((t - win.opens) / WEEK) + 1, 1, 12);
+  const signedByUs = entries.some((s) => s.artist);
+  $('week').textContent = closed ? (signedByUs ? 'signed by us' : 'closed') : `week ${week} of 12`;
+  if (closed && !ADMIN_KEY && !$('signForm').hidden) {
+    $('signForm').hidden = true;
+    $('hint').textContent = '';
+    msg.textContent = signedByUs
+      ? `${entries.length - 1} people signed it. then we signed it.`
+      : `twelve weeks are up. ${entries.length} people signed it. now we sign it.`;
+  }
+}
+
+// the pens
+PENS.forEach((c) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'pen');
+  if (c === pick.color) b.classList.add('on');
+  b.onclick = () => {
+    pick.color = c;
+    [...$('pens').children].forEach((x) => x.classList.toggle('on', x === b));
+    drawGhost();
+  };
+  $('pens').append(b);
+});
+
+function sigEl(s) {
+  const el = document.createElement('div');
+  el.className = 'sig' + (s.artist ? ' artist' : '');
+  el.textContent = s.name;
+  Object.assign(el.style, {
+    left: s.x + '%', top: s.y + '%', color: s.color,
+    fontFamily: `'${s.font || 'Caveat'}', cursive`,
+    fontSize: (s.artist ? 9 : (s.size || 24) / 6.5) + 'cqw',
+    transform: `rotate(${s.rot || 0}deg)`,
+  });
+  if (s.id) el.dataset.id = s.id;
+  return el;
+}
+function render(freshId) {
+  sleeve.querySelectorAll('.sig:not(.ghost)').forEach((el) => el.remove());
+  entries.forEach((s) => {
+    const el = sigEl(s);
+    if (s.id === freshId) el.classList.add('new');
+    sleeve.append(el);
+  });
+  $('hint').style.display = entries.length || pick.x != null ? 'none' : 'grid';
+  $('sigCount').textContent = entries.length ? `${entries.length} ${entries.length === 1 ? 'signature' : 'signatures'}` : 'no signatures yet';
+}
+
+// placing your name: tap the square, then drag to adjust
+let ghost = null;
+function drawGhost() {
+  ghost?.remove(); ghost = null;
+  if (pick.x == null) return;
+  ghost = sigEl({ name: $('name').value.trim() || 'your name', color: pick.color, font: 'Caveat', x: pick.x, y: pick.y, rot: -4, size: 26, artist: !!ADMIN_KEY });
+  ghost.classList.add('ghost');
+  sleeve.append(ghost);
+  $('hint').style.display = 'none';
+}
+const toPct = (e) => {
+  const r = sleeve.getBoundingClientRect();
+  return [((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100];
+};
+let drag = null, swallow = false;
+sleeve.addEventListener('pointerdown', (e) => {
+  if (!e.target.classList.contains('ghost')) return;
+  const [px, py] = toPct(e);
+  drag = { ox: px - pick.x, oy: py - pick.y };
+  sleeve.setPointerCapture(e.pointerId); ghost.classList.add('dragging'); e.preventDefault();
+});
+sleeve.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const [px, py] = toPct(e);
+  pick.x = clamp(px - drag.ox, 1, 86); pick.y = clamp(py - drag.oy, 4, 96);
+  Object.assign(ghost.style, { left: pick.x + '%', top: pick.y + '%' });
+});
+const endDrag = () => { if (!drag) return; drag = null; ghost?.classList.remove('dragging'); swallow = true; };
+sleeve.addEventListener('pointerup', endDrag);
+sleeve.addEventListener('pointercancel', endDrag);
+sleeve.addEventListener('click', async (e) => {
+  if (swallow) { swallow = false; return; }
+  const id = e.target.dataset?.id;
+  if (ADMIN_KEY && id && !e.target.classList.contains('ghost')) {
+    const s = entries.find((x) => x.id === id);
+    if (!confirm(`remove "${s?.name}"?`)) return;
+    const r = await fetch('/api/signatures/' + id, { method: 'DELETE', headers: { 'x-admin-key': ADMIN_KEY } });
+    if (r.ok) { entries = entries.filter((x) => x.id !== id); render(); }
+    return;
+  }
+  if ($('signForm').hidden) return;
+  const [px, py] = toPct(e);
+  pick.x = clamp(px, 1, 86); pick.y = clamp(py, 4, 96);
+  drawGhost();
+  if (!$('name').value) $('name').focus();
+});
+$('name').addEventListener('input', drawGhost);
+// say the rules only when they matter
+$('contact').addEventListener('focus', () => { msg.textContent = 'only we see your email or phone. one signature a day.'; });
+$('contact').addEventListener('blur', () => { if (msg.textContent.startsWith('only we see')) msg.textContent = ''; });
+
+$('signForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector('[type=submit]'); btn.disabled = true; msg.textContent = 'signing…';
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (ADMIN_KEY) headers['x-admin-key'] = ADMIN_KEY;   // our signature
+    const r = await fetch('/api/signatures', {
+      method: 'POST', headers,
+      body: JSON.stringify({ name: $('name').value, contact: $('contact').value, color: pick.color, x: pick.x, y: pick.y }),
+    });
+    const s = await r.json();
+    if (!r.ok) throw new Error(s.error);
+    e.target.reset();
+    pick.x = pick.y = null; drawGhost();
+    entries.push(s); render(s.id);
+    msg.textContent = 'thank you. your name is on it now.';
+  } catch (err) {
+    msg.textContent = err.message || 'something went wrong, try again';
+  }
+  btn.disabled = false;
+});
+
+async function loadWindow() {
+  try {
+    const [a, list] = await Promise.all([
+      fetch('/api/signing').then((r) => r.json()),
+      fetch('/api/signatures').then((r) => r.json()),
+    ]);
+    win = { opens: new Date(a.opens).getTime(), closes: new Date(a.closes).getTime() };
+    entries = list;
+    render();
+    tick();
+  } catch {}
+}
+if (ADMIN_KEY) $('contact').required = false;
+
+/* ---------------- go ---------------- */
+tick(); setInterval(tick, 1000);
+ping(); setInterval(ping, 20000);
+loadWindow();
+document.fonts.ready.then(() => render());
+</script>
+</body>
+</html>
