@@ -67,7 +67,9 @@ end $$;
 
 -- Slurs and hate terms only. Names are normalised (accents, leetspeak, spacing, repeated letters)
 -- and checked as whole words, so names like Nigel, Scunthorpe or Spicy pass.
-create or replace function private.is_blocked(raw text) returns boolean language plpgsql stable as $$
+-- (Supabase keeps add-ons like unaccent in the "extensions" schema, hence the search_path)
+create or replace function private.is_blocked(raw text) returns boolean language plpgsql stable
+set search_path = public, extensions, pg_temp as $$
 declare
   base text := lower(unaccent(coalesce(raw, '')));
   leet text := translate(base, '0134578@!|$9', 'oieastbaiisg');
@@ -115,7 +117,7 @@ $$;
 
 -- Sign the square. One signature per email/phone per day, at most 3 per network per day.
 create or replace function public.sign(p_name text, p_contact text, p_color text default null, p_x real default null, p_y real default null)
-returns public.signatures language plpgsql security definer set search_path = public, private, pg_temp as $$
+returns public.signatures language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
 declare
   n text := left(btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g')), 32);
   c text := private.norm_contact(p_contact);
@@ -160,7 +162,7 @@ end $$;
 
 -- Our signature: needs the admin key; no daily limit, works after signing closes, written larger.
 create or replace function public.artist_sign(p_key text, p_name text, p_color text default null, p_x real default null, p_y real default null)
-returns public.signatures language plpgsql security definer set search_path = public, private, pg_temp as $$
+returns public.signatures language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
 declare r public.signatures; n text := left(btrim(coalesce(p_name, '')), 32);
 begin
   if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
@@ -175,7 +177,7 @@ begin
 end $$;
 
 create or replace function public.remove_signature(p_key text, p_id uuid) returns boolean
-language plpgsql security definer set search_path = public, private, pg_temp as $$
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
 begin
   if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
   delete from public.signatures where id = p_id;
@@ -185,7 +187,7 @@ end $$;
 -- Everyone who signed, with their contact. Owner only.
 create or replace function public.signers(p_key text)
 returns table (signed_at timestamptz, name text, contact text, still_on_page boolean)
-language plpgsql security definer set search_path = public, private, pg_temp as $$
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
 begin
   if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
   return query select c.created_at, c.name, c.contact, c.signature_id is not null
@@ -194,7 +196,7 @@ end $$;
 
 -- the visitor number: each visitor gets their own numbered copy
 create or replace function public.hit() returns bigint
-language sql security definer set search_path = public, private, pg_temp as $$
+language sql security definer set search_path = public, private, extensions, pg_temp as $$
   insert into private.counters (key, value) values ('visits', 1)
   on conflict (key) do update set value = private.counters.value + 1
   returning value
@@ -202,7 +204,7 @@ $$;
 
 -- who has the page open right now, plus the server's clock
 create or replace function public.ping(p_id text) returns json
-language plpgsql security definer set search_path = public, private, pg_temp as $$
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
 declare n int;
 begin
   if p_id is not null and length(p_id) between 1 and 24 then
