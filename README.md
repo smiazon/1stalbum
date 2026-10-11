@@ -35,6 +35,8 @@ Open `https://smiazon.github.io/1stalbum/#admin=<owner key>`:
 - **Sign it as us:** tap a spot, type the name, press sign. No email needed, works after signing closes, written larger.
 - **Remove a signature:** click it.
 - **Who signed:** click **signers (csv)** top right for every name, email or phone, and time.
+- **The cover:** click **artwork (png)** to download the signed square as a 3000×3000 image, every signature in place.
+  Signatures stay saved from day one through Jan 1; nothing resets between weeks.
 
 ## Rules (enforced in the database)
 

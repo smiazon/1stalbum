@@ -381,6 +381,10 @@ if (ADMIN_KEY) {
     a.click(); URL.revokeObjectURL(a.href);
   };
   document.querySelector('header').append(link);
+  const art = document.createElement('button');
+  art.className = 'link'; art.textContent = 'artwork (png)'; art.style.marginLeft = '18px';
+  art.onclick = () => downloadArtwork();
+  document.querySelector('header').append(art);
 }
 const PENS = ['#1b1b1b', '#1d3b8f', '#b3261e'];
 const pick = { color: PENS[0], x: null, y: null };
@@ -416,6 +420,51 @@ PENS.forEach((c) => {
   };
   $('pens').append(b);
 });
+
+// The signed square as a 3000×3000 image, for the album cover. Owner mode only.
+async function downloadArtwork() {
+  const S = 3000, cq = S / 100;                        // 1cqw on the page = 30px here
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  await document.fonts.ready;
+  await Promise.all([...new Set(entries.map((s) => s.font || 'Caveat'))].map((f) => document.fonts.load(`80px '${f}'`)));
+
+  // the board: same soft light as on the page
+  const bg = g.createRadialGradient(S * .3, S * .2, 0, S * .3, S * .2, S * 1.2);
+  bg.addColorStop(0, '#fdfcf9'); bg.addColorStop(.58, '#f3f1ea'); bg.addColorStop(1, '#ebe8df');
+  g.fillStyle = bg; g.fillRect(0, 0, S, S);
+
+  // blind emboss: a shadow and a highlight, no ink
+  const book = getComputedStyle(document.body).fontFamily;
+  const emboss = (text, font, x, y, rot, align) => {
+    g.save(); g.translate(x, y); g.rotate(rot * Math.PI / 180);
+    g.font = font; g.textAlign = align; g.textBaseline = 'alphabetic';
+    g.fillStyle = 'rgba(0,0,0,.13)'; g.fillText(text, -3, -3);
+    g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(text, 3, 3);
+    g.fillStyle = '#f1efe8'; g.fillText(text, 0, 0);
+    g.restore();
+  };
+  emboss('new music every friday', `italic ${3.6 * cq}px ${book}`, S - 7 * cq, S - 9 * cq, -4, 'right');
+
+  // every signature, where it sits on the page
+  g.globalCompositeOperation = 'multiply';
+  entries.forEach((s) => {
+    const size = (s.artist ? 9 : (s.size || 24) / 6.5) * cq;
+    g.save();
+    g.translate(s.x / 100 * S, s.y / 100 * S + size / 2);   // pivot on the left-middle, like the page
+    g.rotate((s.rot || 0) * Math.PI / 180);
+    g.globalAlpha = s.artist ? 1 : .92;
+    g.fillStyle = s.color; g.font = `${size}px '${s.font || 'Caveat'}', cursive`;
+    g.textBaseline = 'middle'; g.fillText(s.name, 0, 0);
+    g.restore();
+  });
+
+  c.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `1stalbum-cover-${new Date().toISOString().slice(0, 10)}.png`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }, 'image/png');
+}
 
 function sigEl(s) {
   const el = document.createElement('div');
