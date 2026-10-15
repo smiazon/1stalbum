@@ -110,7 +110,7 @@
   .tracklist li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; padding: 2px 0; color: var(--dim); }
   .tracklist .d { font-size: 13px; }
   .tracklist li.now { color: var(--light); }
-  .tracklist li.now .t { font-style: italic; }
+  .tracklist li.now .t { font-style: italic; font-variant-numeric: tabular-nums; }
   .tracklist li.out { color: var(--light); cursor: pointer; }
   .tracklist li.out:hover .t, .tracklist li.playing .t { text-decoration: underline; text-underline-offset: 3px; }
 
@@ -166,9 +166,12 @@
   .tool { border: 0; background: none; cursor: pointer; padding: 2px 4px; font: 17px/1 var(--book); color: var(--ink); }
   .tool:disabled { color: #c7c7cc; cursor: default; }
   /* how much paint is left */
-  .ink { height: 3px; border-radius: 2px; background: rgba(0,0,0,.08); margin: 9px 0 8px; overflow: hidden; }
-  .ink i { display: block; height: 100%; width: 100%; background: var(--ink); border-radius: 2px; transition: width .12s linear, background .3s; }
+  .inkrow { display: flex; align-items: center; gap: 10px; margin: 9px 0 8px; }
+  .ink { flex: 1; height: 4px; border-radius: 2px; background: rgba(0,0,0,.08); overflow: hidden; }
+  .ink i { display: block; height: 100%; width: 100%; background: var(--ink); border-radius: 2px; }   /* no easing: it moves with the brush */
   .ink.low i { background: #b3261e; }
+  #inkPct { font-size: 12px; color: var(--grey); font-variant-numeric: tabular-nums; min-width: 52px; text-align: right; }
+  #inkPct.low { color: #b3261e; }
   .fields input {
     flex: 1; min-width: 0; font: 16px var(--book); padding: 3px 0; color: var(--ink);
     border: 0; border-bottom: 1px solid rgba(0,0,0,.18); border-radius: 0; outline: 0; background: transparent;
@@ -180,7 +183,7 @@
   .fields .link:hover { text-decoration: underline; }
   .msg { font-size: 13px; font-style: italic; color: var(--grey); min-height: 18px; margin-top: 5px; }
   .tools[hidden] { display: none; }
-  body.admin .sizes, body.admin #undo, body.admin #clear, body.admin .ink, body.admin #contact { display: none; }
+  body.admin .sizes, body.admin #undo, body.admin #clear, body.admin .inkrow, body.admin #contact { display: none; }
 
   /* painting: the square comes forward, everything else steps back */
   .shade { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; transition: opacity .35s ease;
@@ -208,10 +211,14 @@
   body.listening #listen { opacity: 1; pointer-events: auto; }
   #listen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   #leave {
-    position: absolute; top: 14px; right: 18px; background: none; border: 0; cursor: pointer; padding: 6px 10px;
-    color: rgba(255,255,255,.55); font: 22px/1 var(--book); opacity: 0; transition: opacity .4s;
+    position: absolute; left: 50%; bottom: max(26px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: none; border: 0; cursor: pointer; padding: 10px 18px;
+    color: rgba(255,255,255,.62); font: italic 15px/1 var(--book); letter-spacing: .04em;
+    opacity: 0; pointer-events: none; transition: opacity .5s;
   }
-  #listen.awake #leave { opacity: 1; }
+  #leave:hover { color: #fff; }
+  /* step one: move or tap and it appears. step two: press it. */
+  #listen.awake #leave { opacity: 1; pointer-events: auto; }
   #listen:not(.awake) { cursor: none; }
 
   @media (prefers-reduced-motion: reduce) { .sk::after, .pbtn::before, .pbtn::after, .clouds { animation: none; } }
@@ -311,7 +318,7 @@
         <button type="button" class="tool" id="clear" title="clear" aria-label="clear" disabled>&times;</button>
         <button type="button" class="tool link" id="done">done</button>
       </div>
-      <div class="ink" id="ink" title="paint left"><i id="inkBar"></i></div>
+      <div class="inkrow"><div class="ink" id="ink" title="paint left"><i id="inkBar"></i></div><span id="inkPct">100% left</span></div>
       <div class="row fields">
         <input id="name" maxlength="32" placeholder="name" required aria-label="your name">
         <input id="contact" maxlength="80" placeholder="email or phone" required aria-label="email or phone, only we see it">
@@ -326,7 +333,7 @@
 <a class="credit" href="https://unsplash.com/photos/1506905925346-21bda4d32df4" target="_blank" rel="noopener">photo: unsplash</a>
 <div id="listen" aria-hidden="true">
   <canvas id="viz"></canvas>
-  <button id="leave" aria-label="leave">&times;</button>
+  <button id="leave">leave</button>
 </div>
 <audio id="audio" preload="none"></audio>
 
@@ -350,6 +357,11 @@ const SONGS = [
 ].map((s) => ({ ...s, t: new Date(s.at).getTime() }));
 const STARTED = new Date('2026-10-09T00:00:00-04:00').getTime();   // week one began
 
+// Local preview only (http://localhost:3017/?preview): pretend song one is out, using the local mp3.
+// Never active on the real site.
+const PREVIEW = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('preview');
+if (PREVIEW) Object.assign(SONGS[0], { src: 'tracks/01.mp3', title: SONGS[0].title || 'IM SO INLOVE' });
+
 // The guestbook lives in Supabase (see supabase.sql). Both values are meant to be public:
 // visitors can only do what the functions in supabase.sql allow.
 const BACKEND = {
@@ -369,7 +381,7 @@ async function rpc(fn, args = {}) {
 }
 const table = async (name, query) => (await fetch(`${BACKEND.url}/rest/v1/${name}?${query}`, { headers: headers() })).json();
 let clockSkew = 0;                             // server time minus this device's time
-const now = () => Date.now() + clockSkew;
+const now = () => Date.now() + clockSkew + (PREVIEW ? Math.max(0, SONGS[0].t + 60000 - Date.now() - clockSkew) : 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 /* ---------------- the countdown, spelled out ---------------- */
@@ -406,6 +418,7 @@ function tick() {
     $('lead').textContent = 'twelve songs. the album is here.';
   }
   if (out !== shown) { drawTracklist(out); drawPlayer(out); shown = out; }
+  if ($('outIn') && out < SONGS.length) $('outIn').textContent = `out in ${Math.max(0, Math.ceil((SONGS[out].t - t) / 1000)).toLocaleString()} seconds`;
   if (!noteHold) $('note').textContent = peersText;
   windowTick(t);
 }
@@ -424,7 +437,7 @@ function drawTracklist(out) {
       li.onclick = () => play(i);
       li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(i); } };
     } else if (i === out) {
-      li.className = 'now'; t.textContent = 'being made';
+      li.className = 'now'; t.id = 'outIn';
     } else {
       t.textContent = '';
     }
@@ -483,7 +496,7 @@ function audioCtx() {
   if (!sharedCtx && AC) sharedCtx = new AC();
   return sharedCtx;
 }
-const viz = { on: false, an: null, freq: null, wave: null, raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
+const viz = { look: null, on: false, an: null, freq: null, wave: null, raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
 const vc = $('viz'), vx = vc.getContext('2d');
 const buf = document.createElement('canvas'), bx = buf.getContext('2d');
 
@@ -509,8 +522,9 @@ function listen(on) {
   viz.on = on;
   document.body.classList.toggle('listening', on);
   if (on) {
-    analyse();
-    audioCtx()?.resume?.();
+    // only route the song through the visuals once sound is actually allowed, so it can never go silent
+    const c = audioCtx();
+    if (c) Promise.resolve(c.resume?.()).then(() => { if (c.state === 'running') analyse(); }).catch(() => {});
     sizeViz(); vx.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height);
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
     wake();
@@ -524,9 +538,13 @@ let sleepTimer;
 function wake() {
   $('listen').classList.add('awake');
   clearTimeout(sleepTimer);
-  sleepTimer = setTimeout(() => $('listen').classList.remove('awake'), 1800);
+  sleepTimer = setTimeout(() => $('listen').classList.remove('awake'), 2600);
 }
-$('listen').addEventListener('pointermove', wake);
+$('listen').addEventListener('pointermove', (e) => {
+  wake();
+  const k = vc.width / innerWidth;
+  viz.look = { x: e.clientX * k, y: e.clientY * k, at: performance.now() };
+});
 $('listen').addEventListener('pointerdown', wake);
 $('leave').onclick = () => listen(false);                 // leaving doesn't stop the song
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && viz.on) listen(false); });
@@ -558,8 +576,8 @@ function frame(now) {
   vx.globalCompositeOperation = 'source-over';
   vx.fillStyle = '#000'; vx.fillRect(0, 0, W, H);
   vx.save();
-  vx.translate(cx, cy); vx.rotate(.006 + B * .012); vx.scale(.968 - B * .012, .968 - B * .012); vx.translate(-cx, -cy);
-  vx.globalAlpha = .87; vx.drawImage(buf, 0, 0);
+  vx.translate(cx, cy); vx.rotate(.005 + B * .01); vx.scale(.972 - B * .01, .972 - B * .01); vx.translate(-cx, -cy);
+  vx.globalAlpha = .82; vx.drawImage(buf, 0, 0);
   vx.restore();
   vx.globalAlpha = 1;
 
@@ -580,7 +598,7 @@ function frame(now) {
       const a = ((i * .23 + t * .35) % 1) * seg;
       const len = M * (.015 + v * v * .12);
       const hue = (i * 9 + t * 40 + B * 140) % 360;
-      vx.strokeStyle = `hsla(${hue}, 100%, ${52 + v * 14}%, ${.08 + v * .4})`;
+      vx.strokeStyle = `hsla(${hue}, 100%, ${52 + v * 14}%, ${.05 + v * .26})`;
       vx.lineWidth = (1 + v * 5) * (M / 900);
       vx.beginPath();
       const x0 = Math.cos(a) * r, y0 = Math.sin(a) * r;
@@ -595,30 +613,138 @@ function frame(now) {
     vx.restore();
   }
 
-  // the accretion ring: a turning rainbow, brighter on every beat
+  // the spectrum, read anywhere from 0 (low) to 1 (high)
+  const live = viz.an && !audio.paused;
+  const spec = (u) => live ? viz.freq[Math.floor(2 + Math.pow(clamp(u, 0, 1), 1.5) * 300)] / 255 : .3 + .2 * Math.sin(t * 1.7 + u * 9);
+
+  // the wings: four great feathered wings, in an X
+  vx.globalCompositeOperation = 'lighter';
+  for (let w = 0; w < 4; w++) {
+    const L = M * (.5 + B * .12);
+    const sway = Math.sin(t * .8 + w * 1.7) * .3 * (1 + B * .8);
+    vx.save(); vx.translate(cx, cy); vx.rotate(Math.PI / 4 + w * Math.PI / 2 + t * .025 + Math.sin(t * .35 + w) * .05);
+    const n = 52;
+    for (let j = 0; j < n; j++) {
+      const u = j / (n - 1), v = spec(u * .85);
+      const x = Rh * 1.45 + u * L, y = sway * u * u * L * .35;            // the wing bends as it sways
+      const width = Math.sin(Math.PI * Math.min(1, u * 1.1));              // feathers widest mid-wing
+      const barb = M * (.018 + .085 * width) * (.5 + v * .9);
+      const hue = (190 + u * 170 + t * 22 + w * 45) % 360;
+      vx.strokeStyle = `hsla(${hue}, 100%, ${62 + v * 14}%, ${.05 + v * .2})`;
+      vx.lineWidth = Math.max(1, (M / 900) * (1 + v * 2.2));
+      for (const side of [-1, 1]) {
+        const ang = side * (.45 + u * .55);                                  // barbs sweep out along the wing
+        vx.beginPath(); vx.moveTo(x, y);
+        vx.quadraticCurveTo(x + Math.cos(ang * .7) * barb * .55, y + Math.sin(ang * .7) * barb * .55,
+                            x + Math.cos(ang) * barb, y + Math.sin(ang) * barb);
+        vx.stroke();
+      }
+    }
+    vx.restore();
+  }
+
+  // three rings, tumbling in 3D through the eye
+  const RR = Rh * 2.55, ringW = Rh * .15;
+  const rings = [0, 1, 2].map((i) => ({ i, ax: t * (.19 + i * .05) + i * 2.1 + B * .2, ay: t * (.15 - i * .04) + i * 1.3, az: t * .05 * (i - 1) + i }));
+  const pt = (r, th) => {
+    let x = Math.cos(th), y = Math.sin(th), z = 0, q;
+    q = y * Math.cos(r.ax) - z * Math.sin(r.ax); z = y * Math.sin(r.ax) + z * Math.cos(r.ax); y = q;
+    q = x * Math.cos(r.ay) + z * Math.sin(r.ay); z = -x * Math.sin(r.ay) + z * Math.cos(r.ay); x = q;
+    q = x * Math.cos(r.az) - y * Math.sin(r.az); y = x * Math.sin(r.az) + y * Math.cos(r.az); x = q;
+    return [cx + x * RR, cy + y * RR, z];
+  };
+  const fract = (v) => v - Math.floor(v);
+  const openness = (id) => {                                                 // each eye blinks on its own clock
+    const ph = fract(t * .16 + fract(Math.sin(id * 12.9898) * 43758.5));
+    return ph < .035 ? Math.abs(Math.cos(ph / .035 * Math.PI)) : 1;
+  };
+  const look = viz.look && performance.now() - viz.look.at < 4000 ? viz.look
+    : { x: cx + Math.cos(t * .4) * M * .3, y: cy + Math.sin(t * .31) * M * .2 };   // no cursor: they wander
+  function eye(x, y, ang, sz, open, hue, alpha) {
+    const h = sz * .55 * open;
+    vx.save(); vx.translate(x, y); vx.rotate(ang);
+    vx.beginPath(); vx.moveTo(-sz, 0); vx.quadraticCurveTo(0, -h * 2, sz, 0); vx.quadraticCurveTo(0, h * 2, -sz, 0);
+    vx.globalCompositeOperation = 'source-over';
+    vx.fillStyle = `rgba(0,0,0,${.85 * alpha})`; vx.fill();
+    vx.globalCompositeOperation = 'lighter';
+    vx.strokeStyle = `hsla(${hue}, 100%, 78%, ${.85 * alpha})`; vx.lineWidth = Math.max(1, sz * .1); vx.stroke();
+    if (open > .2) {
+      vx.save(); vx.clip();
+      const dx = look.x - x, dy = look.y - y, d = Math.hypot(dx, dy) || 1;     // the iris turns toward you
+      const lx = (dx * Math.cos(-ang) - dy * Math.sin(-ang)) / d * sz * .3, ly = (dx * Math.sin(-ang) + dy * Math.cos(-ang)) / d * sz * .18;
+      vx.fillStyle = `hsla(${hue}, 100%, 55%, ${.9 * alpha})`; vx.beginPath(); vx.arc(lx, ly, sz * .42, 0, Math.PI * 2); vx.fill();
+      vx.globalCompositeOperation = 'source-over';
+      vx.fillStyle = '#000'; vx.beginPath(); vx.arc(lx, ly, sz * .17 * (1 + B * .7), 0, Math.PI * 2); vx.fill();
+      vx.fillStyle = `rgba(255,255,255,${.85 * alpha})`; vx.beginPath(); vx.arc(lx - sz * .1, ly - sz * .1, sz * .06, 0, Math.PI * 2); vx.fill();
+      vx.restore();
+    }
+    vx.restore();
+  }
+  function drawRings(front) {
+    vx.globalCompositeOperation = 'lighter';
+    for (const r of rings) {
+      let prev = pt(r, 0);
+      for (let k = 1; k <= 120; k++) {
+        const th = k / 120 * Math.PI * 2, p = pt(r, th), z = (p[2] + prev[2]) / 2;
+        if ((z >= 0) === front) {
+          const hue = (th * 57.3 + t * 30 + r.i * 120) % 360, lit = .45 + (z + 1) * .3;
+          vx.strokeStyle = `hsla(${hue}, 100%, 60%, ${.1 * lit + B * .07})`; vx.lineWidth = ringW * 2.4;
+          vx.beginPath(); vx.moveTo(prev[0], prev[1]); vx.lineTo(p[0], p[1]); vx.stroke();
+          vx.strokeStyle = `hsla(${hue}, 100%, 82%, ${.5 * lit})`; vx.lineWidth = ringW * .3;
+          vx.beginPath(); vx.moveTo(prev[0], prev[1]); vx.lineTo(p[0], p[1]); vx.stroke();
+        }
+        prev = p;
+      }
+      for (let k = 0; k < 9; k++) {                                         // eyes riding the ring
+        const th = k / 9 * Math.PI * 2 + t * .12 * (r.i % 2 ? -1 : 1);
+        const p = pt(r, th);
+        if ((p[2] >= 0) !== front) continue;
+        const q = pt(r, th + .01), depth = (p[2] + 1) / 2;
+        eye(p[0], p[1], Math.atan2(q[1] - p[1], q[0] - p[0]), Rh * (.12 + depth * .08), openness(r.i * 9 + k),
+            (th * 57.3 + t * 30 + r.i * 120 + 180) % 360, .35 + depth * .65);
+      }
+    }
+  }
+
+  drawRings(false);                                                        // the far side of the rings
+
+  // the iris: a turning rainbow with fine fibres, brighter on every beat
   vx.save(); vx.translate(cx, cy);
-  const ring = vx.createConicGradient ? vx.createConicGradient(t * .8, 0, 0) : null;
-  if (ring) {
+  vx.globalCompositeOperation = 'lighter';
+  if (vx.createConicGradient) {
+    const ring = vx.createConicGradient(t * .8, 0, 0);
     ['#ff3b6b', '#ff9f1c', '#ffe14d', '#3dff8f', '#2de2ff', '#5b6bff', '#c04dff', '#ff3b6b'].forEach((c, i, a) => ring.addColorStop(i / (a.length - 1), c));
     vx.globalAlpha = .22 + B * .3 + K * .15;
-    vx.lineWidth = Rh * (.28 + B * .25);
-    vx.strokeStyle = ring;
+    vx.lineWidth = Rh * (.28 + B * .25); vx.strokeStyle = ring;
     vx.beginPath(); vx.arc(0, 0, Rh * 1.32, 0, Math.PI * 2); vx.stroke();
-    vx.globalAlpha = .07 + K * .12; vx.lineWidth = Rh * .9;    // soft halo
+    vx.globalAlpha = .07 + K * .12; vx.lineWidth = Rh * .9;
     vx.beginPath(); vx.arc(0, 0, Rh * 1.55, 0, Math.PI * 2); vx.stroke();
   }
-  vx.restore();
   vx.globalAlpha = 1;
+  for (let f = 0; f < 120; f++) {
+    const a = f / 120 * Math.PI * 2 + t * .1, v = spec(f / 120), r1 = Rh * 1.03, r2 = Rh * (1.3 + v * .5);
+    vx.strokeStyle = `hsla(${(f * 3 + t * 40) % 360}, 100%, 72%, ${.08 + v * .3})`; vx.lineWidth = Math.max(1, M / 1200);
+    vx.beginPath(); vx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); vx.lineTo(Math.cos(a + .03) * r2, Math.sin(a + .03) * r2); vx.stroke();
+  }
+  // the lids: a neon almond around it all
+  const lw = Rh * 2.9, lh = Rh * 1.55 * (1 - .12 * K);
+  vx.strokeStyle = `rgba(255,255,255,${.35 + viz.high * .4})`; vx.lineWidth = Math.max(1.5, M / 600);
+  vx.beginPath(); vx.moveTo(-lw, 0); vx.quadraticCurveTo(0, -lh * 2, lw, 0); vx.quadraticCurveTo(0, lh * 2, -lw, 0); vx.stroke();
+  vx.strokeStyle = `hsla(${(t * 50) % 360}, 100%, 65%, ${.12 + B * .2})`; vx.lineWidth = Math.max(4, M / 140);
+  vx.stroke();
+  vx.restore();
 
-  // the black hole: nothing gets out
+  // the pupil: a black hole. nothing gets out
   vx.globalCompositeOperation = 'source-over';
   const hole = vx.createRadialGradient(cx, cy, Rh * .82, cx, cy, Rh * 1.12);
   hole.addColorStop(0, '#000'); hole.addColorStop(1, 'rgba(0,0,0,0)');
   vx.fillStyle = hole; vx.beginPath(); vx.arc(cx, cy, Rh * 1.12, 0, Math.PI * 2); vx.fill();
-  vx.globalCompositeOperation = 'lighter';                 // the photon ring
+  vx.globalCompositeOperation = 'lighter';
   vx.strokeStyle = `rgba(255,255,255,${.25 + viz.high * .6})`;
   vx.lineWidth = Math.max(1, M / 700);
   vx.beginPath(); vx.arc(cx, cy, Rh * 1.01, 0, Math.PI * 2); vx.stroke();
+
+  drawRings(true);                                                         // the near side passes in front
   vx.globalCompositeOperation = 'source-over';
 }
 
@@ -684,6 +810,8 @@ function updateTools() {
   const left = Math.max(0, inkLeft()) / INK;
   $('inkBar').style.width = (left * 100).toFixed(1) + '%';
   $('ink').classList.toggle('low', left < .15);
+  $('inkPct').textContent = left <= 0 ? 'out of paint' : `${Math.ceil(left * 100)}% left`;
+  $('inkPct').classList.toggle('low', left < .15);
   $('undo').disabled = $('clear').disabled = !mine.length;
 }
 
