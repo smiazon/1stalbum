@@ -191,7 +191,8 @@
     position: fixed; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%);
     width: var(--S); padding-top: 0;
   }
-  body.painting main { z-index: 6; }
+  body.painting main { z-index: 6; pointer-events: none; }   /* clicks outside the square fall through to the shade, which steps back out */
+  body.painting .stage { pointer-events: auto; }
   body.painting .text { visibility: hidden; }
   body.painting .easel svg, body.painting .cap { display: none; }
   body.painting .sleeve { box-shadow: 0 0 0 1px rgba(0,0,0,.1), 0 30px 80px -10px rgba(0,0,0,.7); }
@@ -201,6 +202,17 @@
   .stage { view-transition-name: square; }
 
   .credit { position: fixed; right: 14px; bottom: 10px; font-size: 11px; color: var(--dim); text-decoration: none; z-index: 1; }
+
+  /* listening: nothing but black, light, and the music */
+  #listen { position: fixed; inset: 0; z-index: 50; background: #000; opacity: 0; pointer-events: none; transition: opacity .9s ease; }
+  body.listening #listen { opacity: 1; pointer-events: auto; }
+  #listen canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #leave {
+    position: absolute; top: 14px; right: 18px; background: none; border: 0; cursor: pointer; padding: 6px 10px;
+    color: rgba(255,255,255,.55); font: 22px/1 var(--book); opacity: 0; transition: opacity .4s;
+  }
+  #listen.awake #leave { opacity: 1; }
+  #listen:not(.awake) { cursor: none; }
 
   @media (prefers-reduced-motion: reduce) { .sk::after, .pbtn::before, .pbtn::after, .clouds { animation: none; } }
 
@@ -312,6 +324,10 @@
 
 <div class="shade" id="shade"></div>
 <a class="credit" href="https://unsplash.com/photos/1506905925346-21bda4d32df4" target="_blank" rel="noopener">photo: unsplash</a>
+<div id="listen" aria-hidden="true">
+  <canvas id="viz"></canvas>
+  <button id="leave" aria-label="leave">&times;</button>
+</div>
 <audio id="audio" preload="none"></audio>
 
 <script>
@@ -441,6 +457,7 @@ function play(i) {
   if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;
   playingIdx = i;
   $('pTitle').textContent = songName(i);   // the player shows whichever song is playing
+  listen(true);
   audio.play();
   [...$('tracklist').children].forEach((li, j) => li.classList.toggle('playing', j === i));
   $('pPlay').classList.add('on');
@@ -453,7 +470,157 @@ audio.addEventListener('timeupdate', () => {
 audio.addEventListener('ended', () => {
   [...$('tracklist').children].forEach((li) => li.classList.remove('playing'));
   $('pPlay').classList.remove('on');
+  setTimeout(() => { if (audio.ended) listen(false); }, 2500);
 });
+
+/* ---------------- listening: a kaleidoscope falling into a black hole ---------------- */
+// Everything on screen is the song: the bins of the spectrum become mirrored neon petals,
+// last frame is pulled inward and turned (so it all spirals toward the centre), and a black
+// hole sits in the middle with a rainbow accretion ring that swells on the bass.
+let sharedCtx = null;
+function audioCtx() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!sharedCtx && AC) sharedCtx = new AC();
+  return sharedCtx;
+}
+const viz = { on: false, an: null, freq: null, wave: null, raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
+const vc = $('viz'), vx = vc.getContext('2d');
+const buf = document.createElement('canvas'), bx = buf.getContext('2d');
+
+function analyse() {
+  if (viz.an) return;
+  const c = audioCtx();
+  if (!c) return;
+  try {
+    const src = c.createMediaElementSource(audio);
+    viz.an = c.createAnalyser(); viz.an.fftSize = 1024; viz.an.smoothingTimeConstant = .8;
+    viz.freq = new Uint8Array(viz.an.frequencyBinCount);
+    viz.wave = new Uint8Array(viz.an.fftSize);
+    src.connect(viz.an); viz.an.connect(c.destination);
+  } catch { viz.an = null; }
+}
+function sizeViz() {
+  const dpr = Math.min(devicePixelRatio || 1, innerWidth < 760 ? 1.25 : 1.5);
+  vc.width = buf.width = Math.round(innerWidth * dpr);
+  vc.height = buf.height = Math.round(innerHeight * dpr);
+}
+function listen(on) {
+  if (viz.on === on) return;
+  viz.on = on;
+  document.body.classList.toggle('listening', on);
+  if (on) {
+    analyse();
+    audioCtx()?.resume?.();
+    sizeViz(); vx.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height);
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
+    wake();
+    viz.raf = requestAnimationFrame(frame);
+  } else {
+    cancelAnimationFrame(viz.raf);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }
+}
+let sleepTimer;
+function wake() {
+  $('listen').classList.add('awake');
+  clearTimeout(sleepTimer);
+  sleepTimer = setTimeout(() => $('listen').classList.remove('awake'), 1800);
+}
+$('listen').addEventListener('pointermove', wake);
+$('listen').addEventListener('pointerdown', wake);
+$('leave').onclick = () => listen(false);                 // leaving doesn't stop the song
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && viz.on) listen(false); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && viz.on) listen(false); });
+addEventListener('resize', () => { if (viz.on) sizeViz(); });
+
+const band = (a, b) => { let v = 0; for (let i = a; i < b; i++) v += viz.freq[i]; return v / (b - a) / 255; };
+function frame(now) {
+  viz.raf = requestAnimationFrame(frame);
+  const W = vc.width, H = vc.height, cx = W / 2, cy = H / 2, M = Math.min(W, H);
+  viz.t += 1 / 60;
+  const t = viz.t;
+
+  // listen
+  let bass = 0, mid = 0, high = 0;
+  if (viz.an && !audio.paused) {
+    viz.an.getByteFrequencyData(viz.freq);
+    bass = band(1, 8); mid = band(8, 64); high = band(64, 220);
+  } else {                                                 // before the sound arrives: a slow breath
+    bass = .25 + Math.sin(t * 1.3) * .08; mid = .2; high = .15;
+  }
+  viz.bass += (bass - viz.bass) * .3; viz.mid += (mid - viz.mid) * .2; viz.high += (high - viz.high) * .25;
+  viz.avg += (bass - viz.avg) * .02;
+  viz.kick = Math.max(viz.kick * .9, bass > viz.avg * 1.2 && bass > .35 ? 1 : 0);
+  const B = viz.bass, K = viz.kick;
+
+  // the pull: last frame, drawn a little smaller and turned, so everything spirals in
+  bx.globalCompositeOperation = 'copy'; bx.drawImage(vc, 0, 0);
+  vx.globalCompositeOperation = 'source-over';
+  vx.fillStyle = '#000'; vx.fillRect(0, 0, W, H);
+  vx.save();
+  vx.translate(cx, cy); vx.rotate(.006 + B * .012); vx.scale(.968 - B * .012, .968 - B * .012); vx.translate(-cx, -cy);
+  vx.globalAlpha = .87; vx.drawImage(buf, 0, 0);
+  vx.restore();
+  vx.globalAlpha = 1;
+
+  // the kaleidoscope: 12 mirrored wedges of the spectrum
+  const N = 12, seg = Math.PI * 2 / N, Rh = M * (.1 + B * .025), Rmax = Math.hypot(W, H) / 2;
+  vx.globalCompositeOperation = 'lighter';
+  vx.lineCap = 'round';
+  const bins = 40;
+  for (let k = 0; k < N; k++) {
+    vx.save();
+    vx.translate(cx, cy); vx.rotate(k * seg + t * .07);
+    if (k % 2) vx.scale(1, -1);
+    for (let i = 0; i < bins; i++) {
+      const bin = Math.floor(2 + Math.pow(i / bins, 1.6) * 260);
+      const v = viz.an && !audio.paused ? viz.freq[bin] / 255 : .25 + .2 * Math.sin(t * 2 + i * .4);
+      if (v < .08) continue;
+      const r = Rh * 1.5 + (i / bins) * (Rmax * .9 - Rh * 1.5);
+      const a = ((i * .23 + t * .35) % 1) * seg;
+      const len = M * (.015 + v * v * .12);
+      const hue = (i * 9 + t * 40 + B * 140) % 360;
+      vx.strokeStyle = `hsla(${hue}, 100%, ${52 + v * 14}%, ${.08 + v * .4})`;
+      vx.lineWidth = (1 + v * 5) * (M / 900);
+      vx.beginPath();
+      const x0 = Math.cos(a) * r, y0 = Math.sin(a) * r;
+      const x1 = Math.cos(a + .08 * v) * (r + len), y1 = Math.sin(a + .08 * v) * (r + len);
+      vx.moveTo(x0, y0); vx.quadraticCurveTo(Math.cos(a - .1) * (r + len * .5), Math.sin(a - .1) * (r + len * .5), x1, y1);
+      vx.stroke();
+      if (v > .72) {                                         // bright notes become little stars
+        vx.fillStyle = `hsla(${(hue + 180) % 360}, 100%, 70%, ${(v - .6) * 1.5})`;
+        vx.beginPath(); vx.arc(x1, y1, (2 + v * 4) * (M / 900), 0, Math.PI * 2); vx.fill();
+      }
+    }
+    vx.restore();
+  }
+
+  // the accretion ring: a turning rainbow, brighter on every beat
+  vx.save(); vx.translate(cx, cy);
+  const ring = vx.createConicGradient ? vx.createConicGradient(t * .8, 0, 0) : null;
+  if (ring) {
+    ['#ff3b6b', '#ff9f1c', '#ffe14d', '#3dff8f', '#2de2ff', '#5b6bff', '#c04dff', '#ff3b6b'].forEach((c, i, a) => ring.addColorStop(i / (a.length - 1), c));
+    vx.globalAlpha = .22 + B * .3 + K * .15;
+    vx.lineWidth = Rh * (.28 + B * .25);
+    vx.strokeStyle = ring;
+    vx.beginPath(); vx.arc(0, 0, Rh * 1.32, 0, Math.PI * 2); vx.stroke();
+    vx.globalAlpha = .07 + K * .12; vx.lineWidth = Rh * .9;    // soft halo
+    vx.beginPath(); vx.arc(0, 0, Rh * 1.55, 0, Math.PI * 2); vx.stroke();
+  }
+  vx.restore();
+  vx.globalAlpha = 1;
+
+  // the black hole: nothing gets out
+  vx.globalCompositeOperation = 'source-over';
+  const hole = vx.createRadialGradient(cx, cy, Rh * .82, cx, cy, Rh * 1.12);
+  hole.addColorStop(0, '#000'); hole.addColorStop(1, 'rgba(0,0,0,0)');
+  vx.fillStyle = hole; vx.beginPath(); vx.arc(cx, cy, Rh * 1.12, 0, Math.PI * 2); vx.fill();
+  vx.globalCompositeOperation = 'lighter';                 // the photon ring
+  vx.strokeStyle = `rgba(255,255,255,${.25 + viz.high * .6})`;
+  vx.lineWidth = Math.max(1, M / 700);
+  vx.beginPath(); vx.arc(cx, cy, Rh * 1.01, 0, Math.PI * 2); vx.stroke();
+  vx.globalCompositeOperation = 'source-over';
+}
 
 /* ---------------- visitors ---------------- */
 const me = Math.random().toString(36).slice(2);
@@ -793,9 +960,8 @@ const wind = { ctx: null, out: null, on: true, started: false };
 function startWind() {
   if (wind.started || !wind.on) return;
   wind.started = true;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
-  const c = wind.ctx = new AC();
+  const c = wind.ctx = audioCtx();
+  if (!c) return;
   const buf = c.createBuffer(1, c.sampleRate * 4, c.sampleRate);
   const data = buf.getChannelData(0);
   let last = 0;
