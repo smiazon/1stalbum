@@ -218,7 +218,7 @@ end $$;
 
 -- ---------- paint: visitors paint on the square ----------
 -- A painting is a list of strokes: { c: colour, s: brush size, p: [x0, y0, x1, y1, ...] } in 0..1000 square units.
--- Ink is limited: the length of every stroke times its brush size must stay under 80,000.
+-- Ink is limited: the length of every stroke times its brush size must stay under 60,000.
 
 create table if not exists public.drawings (
   id         uuid primary key default gen_random_uuid(),
@@ -241,7 +241,7 @@ begin
   for st in select value from jsonb_array_elements(p) loop
     col := st->>'c';
     sz := (st->>'s')::int;
-    if col is null or col not in ('#1b1b1b', '#1d3b8f', '#b3261e', '#d9a21b') then raise exception 'unknown colour'; end if;
+    if col is null or col !~ '^#[0-9a-fA-F]{6}$' then raise exception 'unknown colour'; end if;
     if sz is null or sz not in (5, 12, 24) then raise exception 'unknown brush'; end if;
     if jsonb_typeof(st->'p') <> 'array' then raise exception 'bad stroke'; end if;
     n := jsonb_array_length(st->'p');
@@ -281,7 +281,7 @@ begin
   if now() >= (select closes_at from private.settings) then raise exception 'signing is closed. now we sign it.'; end if;
   if (select count(*) from public.drawings) >= 1200 then raise exception 'there''s no room left'; end if;
   select * into cs from private.clean_strokes(p_strokes);
-  if cs.ink > 82400 then raise exception 'out of ink'; end if;
+  if cs.ink > 61800 then raise exception 'out of ink'; end if;
   if exists (select 1 from private.contacts where contact = c and day = d) then
     raise exception 'you already signed today. come back tomorrow.';
   end if;

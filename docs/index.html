@@ -154,10 +154,12 @@
     font-size: 15px;
   }
   .tools .row { display: flex; align-items: center; gap: 12px; }
+  .tools .row:first-child { flex-wrap: wrap; row-gap: 8px; }
   .tools .grow { flex: 1; }
   .dots { display: flex; align-items: center; gap: 7px; }
   .dots button { border: 0; padding: 0; border-radius: 50%; cursor: pointer; background: var(--ink); }
-  .colors button { width: 16px; height: 16px; }
+  .colors { flex-wrap: wrap; gap: 6px; }
+  .colors button { width: 15px; height: 15px; }
   .sizes button { background: #8e8e93; }
   .dots button.on { outline: 1.5px solid var(--ink); outline-offset: 2px; }
   .sizes { padding-left: 10px; border-left: 1px solid rgba(0,0,0,.12); }
@@ -179,6 +181,24 @@
   .msg { font-size: 13px; font-style: italic; color: var(--grey); min-height: 18px; margin-top: 5px; }
   .tools[hidden] { display: none; }
   body.admin .sizes, body.admin #undo, body.admin #clear, body.admin .ink, body.admin #contact { display: none; }
+
+  /* painting: the square comes forward, everything else steps back */
+  .shade { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; transition: opacity .35s ease;
+           background: rgba(12,14,24,.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  body.painting .shade { opacity: 1; pointer-events: auto; }
+  body.painting .stage {
+    --S: min(calc(100dvh - 250px), calc(100vw - 48px), 760px);
+    position: fixed; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: var(--S); padding-top: 0;
+  }
+  body.painting main { z-index: 6; }
+  body.painting .text { visibility: hidden; }
+  body.painting .easel svg, body.painting .cap { display: none; }
+  body.painting .sleeve { box-shadow: 0 0 0 1px rgba(0,0,0,.1), 0 30px 80px -10px rgba(0,0,0,.7); }
+  body.painting .tools { margin-top: 16px; width: max(var(--S), min(420px, calc(100vw - 32px))); margin-left: calc((var(--S) - max(var(--S), min(420px, calc(100vw - 32px)))) / 2); }
+  #done { display: none; color: var(--blue); }
+  body.painting #done { display: inline; }
+  .stage { view-transition-name: square; }
 
   .credit { position: fixed; right: 14px; bottom: 10px; font-size: 11px; color: var(--dim); text-decoration: none; z-index: 1; }
 
@@ -259,7 +279,7 @@
         <span class="emboss title">new music every friday</span>
         <span class="emboss serial" id="serial">no. 0000001</span>
         <canvas id="paint"></canvas>
-        <div class="hint" id="hint">paint something</div>
+        <div class="hint" id="hint">tap to paint</div>
       </div>
       <svg class="front" viewBox="0 0 140 130" preserveAspectRatio="xMidYMin meet" aria-hidden="true">
         <rect x="62" y="4" width="16" height="9" rx="1.5" fill="url(#wood)"/>                <!-- top clamp -->
@@ -277,6 +297,7 @@
         <span class="grow"></span>
         <button type="button" class="tool" id="undo" title="undo" aria-label="undo" disabled>&#8630;</button>
         <button type="button" class="tool" id="clear" title="clear" aria-label="clear" disabled>&times;</button>
+        <button type="button" class="tool link" id="done">done</button>
       </div>
       <div class="ink" id="ink" title="paint left"><i id="inkBar"></i></div>
       <div class="row fields">
@@ -289,6 +310,7 @@
   </section>
 </main>
 
+<div class="shade" id="shade"></div>
 <a class="credit" href="https://unsplash.com/photos/1506905925346-21bda4d32df4" target="_blank" rel="noopener">photo: unsplash</a>
 <audio id="audio" preload="none"></audio>
 
@@ -453,9 +475,9 @@ if (online()) rpc('hit').then((count) => {
 
 /* ---------------- the square: everyone paints on it ---------------- */
 // Paint goes under the names already written on it. Each visitor gets a limited amount of paint.
-const COLORS = ['#1b1b1b', '#1d3b8f', '#b3261e', '#d9a21b'];
+const COLORS = ['#1b1b1b', '#6e6e73', '#7a4b2a', '#b3261e', '#e8692c', '#d9a21b', '#3f8f3a', '#138a8a', '#1d3b8f', '#6b3fa0', '#e36aa0'];
 const SIZES = [5, 12, 24];                 // brush widths, in thousandths of the square
-const INK = 80000;                         // stroke length × brush width, in square units (checked again by the database)
+const INK = 60000;                         // stroke length × brush width, in square units (checked again by the database)
 const sleeve = $('sleeve'), canvas = $('paint'), ctx = canvas.getContext('2d'), msg = $('msg');
 const pen = { color: COLORS[0], size: SIZES[1] };
 let paintings = [];     // everyone's saved paintings: { id, strokes }
@@ -530,8 +552,21 @@ const toUnits = (e) => {
   const r = sleeve.getBoundingClientRect();
   return [clamp(Math.round((e.clientX - r.left) / r.width * 1000), 0, 1000), clamp(Math.round((e.clientY - r.top) / r.height * 1000), 0, 1000)];
 };
+// tap the square to bring it forward; paint once it's in focus
+function focusPaint(on) {
+  if (document.body.classList.contains('painting') === on) return;
+  const flip = () => { document.body.classList.toggle('painting', on); fitCanvas(); };
+  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(flip);
+  else flip();
+  $('hint').textContent = on ? 'paint here' : 'tap to paint';
+}
+$('done').onclick = () => focusPaint(false);
+$('shade').onclick = () => focusPaint(false);
+addEventListener('keydown', (e) => { if (e.key === 'Escape') focusPaint(false); });
+
 sleeve.addEventListener('pointerdown', (e) => {
   if (ADMIN_KEY || $('signForm').hidden) return;
+  if (!document.body.classList.contains('painting')) { e.preventDefault(); focusPaint(true); return; }
   if (inkLeft() <= 0) { msg.textContent = 'out of paint. sign it, or undo.'; return; }
   cur = { c: pen.color, s: pen.size, p: toUnits(e) };
   sleeve.setPointerCapture(e.pointerId);
@@ -709,6 +744,7 @@ $('signForm').addEventListener('submit', async (e) => {
       const d = await rpc('draw', { p_name: $('name').value, p_contact: $('contact').value, p_strokes: mine });
       paintings.push(d); mine = [];
       renderNames(); updateTools();
+      setTimeout(() => focusPaint(false), 900);
     }
     e.target.reset();
     msg.textContent = 'thank you. you’re on it now.';
