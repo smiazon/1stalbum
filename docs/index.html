@@ -216,6 +216,7 @@
     color: rgba(255,255,255,.62); font: italic 15px/1 var(--book); letter-spacing: .04em;
     opacity: 0; pointer-events: none; transition: opacity .5s;
   }
+  #leave { z-index: 2; }
   #leave:hover { color: #fff; }
   /* step one: move or tap and it appears. step two: press it. */
   #listen.awake #leave { opacity: 1; pointer-events: auto; }
@@ -467,7 +468,12 @@ function play(i) {
     setTimeout(() => { noteHold = false; }, 4000);
     return;
   }
-  if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;
+  if (playingIdx === i && audio.src && !audio.ended) {     // already playing: just go back in, right where it is
+    listen(true);
+    if (audio.paused) audio.play().catch(() => {});
+    return;
+  }
+  if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;   // a new song, or this one again after it ended
   playingIdx = i;
   $('pTitle').textContent = songName(i);   // the player shows whichever song is playing
   listen(true);
@@ -497,7 +503,9 @@ function audioCtx() {
   return sharedCtx;
 }
 const viz = { look: null, on: false, an: null, freq: null, wave: null, raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
-const vc = $('viz'), vx = vc.getContext('2d');
+const out = $('viz'), ox = out.getContext('2d');                       // what you see: the scene plus effects
+const vc = document.createElement('canvas'), vx = vc.getContext('2d');   // the scene, which spirals into itself
+const small = document.createElement('canvas'), sx = small.getContext('2d');   // for the bloom
 const buf = document.createElement('canvas'), bx = buf.getContext('2d');
 
 function analyse() {
@@ -514,8 +522,10 @@ function analyse() {
 }
 function sizeViz() {
   const dpr = Math.min(devicePixelRatio || 1, innerWidth < 760 ? 1.25 : 1.5);
-  vc.width = buf.width = Math.round(innerWidth * dpr);
-  vc.height = buf.height = Math.round(innerHeight * dpr);
+  out.width = vc.width = buf.width = Math.round(innerWidth * dpr);
+  out.height = vc.height = buf.height = Math.round(innerHeight * dpr);
+  small.width = Math.ceil(vc.width / 5); small.height = Math.ceil(vc.height / 5);
+  viz.dust = null;
 }
 function listen(on) {
   if (viz.on === on) return;
@@ -525,7 +535,7 @@ function listen(on) {
     // only route the song through the visuals once sound is actually allowed, so it can never go silent
     const c = audioCtx();
     if (c) Promise.resolve(c.resume?.()).then(() => { if (c.state === 'running') analyse(); }).catch(() => {});
-    sizeViz(); vx.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height);
+    sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height);
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
     wake();
     viz.raf = requestAnimationFrame(frame);
@@ -554,6 +564,10 @@ addEventListener('resize', () => { if (viz.on) sizeViz(); });
 const band = (a, b) => { let v = 0; for (let i = a; i < b; i++) v += viz.freq[i]; return v / (b - a) / 255; };
 function frame(now) {
   viz.raf = requestAnimationFrame(frame);
+  if (viz.last) viz.ft = (viz.ft || 16) * .95 + Math.min(100, now - viz.last) * .05;   // smoothed frame time
+  viz.last = now;
+  if (viz.ft > 34) viz.slow = (viz.slow || 0) + 1; else viz.slow = Math.max(0, (viz.slow || 0) - 1);
+  if (viz.slow > 90) viz.lite = true;                                                    // ~1.5s of struggling
   const W = vc.width, H = vc.height, cx = W / 2, cy = H / 2, M = Math.min(W, H);
   viz.t += 1 / 60;
   const t = viz.t;
@@ -569,7 +583,10 @@ function frame(now) {
   viz.bass += (bass - viz.bass) * .3; viz.mid += (mid - viz.mid) * .2; viz.high += (high - viz.high) * .25;
   viz.avg += (bass - viz.avg) * .02;
   viz.kick = Math.max(viz.kick * .9, bass > viz.avg * 1.2 && bass > .35 ? 1 : 0);
-  const B = viz.bass, K = viz.kick;
+  viz.hAvg = (viz.hAvg || 0) + (high - (viz.hAvg || 0)) * .05;
+  viz.hk = Math.max((viz.hk || 0) * .82, high > viz.hAvg * 1.22 && high > .1 ? 1 : 0);   // a hi-hat, a cymbal, a breath
+  viz.spin = (viz.spin || 0) + .0015 + viz.mid * .012;                                    // the mids turn it
+  const B = viz.bass, K = viz.kick, Hi = viz.high, HK = viz.hk;
 
   // the pull: last frame, drawn a little smaller and turned, so everything spirals in
   bx.globalCompositeOperation = 'copy'; bx.drawImage(vc, 0, 0);
@@ -588,7 +605,7 @@ function frame(now) {
   const bins = 40;
   for (let k = 0; k < N; k++) {
     vx.save();
-    vx.translate(cx, cy); vx.rotate(k * seg + t * .07);
+    vx.translate(cx, cy); vx.rotate(k * seg + viz.spin);
     if (k % 2) vx.scale(1, -1);
     for (let i = 0; i < bins; i++) {
       const bin = Math.floor(2 + Math.pow(i / bins, 1.6) * 260);
@@ -598,7 +615,7 @@ function frame(now) {
       const a = ((i * .23 + t * .35) % 1) * seg;
       const len = M * (.015 + v * v * .12);
       const hue = (i * 9 + t * 40 + B * 140) % 360;
-      vx.strokeStyle = `hsla(${hue}, 100%, ${52 + v * 14}%, ${.05 + v * .26})`;
+      vx.strokeStyle = `hsla(${hue}, 100%, ${52 + v * 14}%, ${.035 + v * .18})`;
       vx.lineWidth = (1 + v * 5) * (M / 900);
       vx.beginPath();
       const x0 = Math.cos(a) * r, y0 = Math.sin(a) * r;
@@ -617,30 +634,54 @@ function frame(now) {
   const live = viz.an && !audio.paused;
   const spec = (u) => live ? viz.freq[Math.floor(2 + Math.pow(clamp(u, 0, 1), 1.5) * 300)] / 255 : .3 + .2 * Math.sin(t * 1.7 + u * 9);
 
-  // the wings: four great feathered wings, in an X
+  // the wings: four great wings in an X, three rows of feathers each, every feather a glow and a core
   vx.globalCompositeOperation = 'lighter';
+  const small_ = innerWidth < 760;
+  const ROWS = [                                   // coverts, secondaries, primaries
+    { from: 0, to: .6, n: small_ ? 22 : 34, len: .32, fan: .5 },
+    { from: .12, to: .88, n: small_ ? 26 : 40, len: .62, fan: .75 },
+    { from: .45, to: 1, n: small_ ? 18 : 28, len: 1, fan: 1.05 },
+  ];
   for (let w = 0; w < 4; w++) {
-    const L = M * (.5 + B * .12);
-    const sway = Math.sin(t * .8 + w * 1.7) * .3 * (1 + B * .8);
+    const L = Math.hypot(W, H) * (.36 + B * .2 + K * .05);
+    const sway = Math.sin(t * .8 + w * 1.7) * .3 * (1 + B * 1.8) + Math.sin(t * 3.1 + w) * .12 * K;   // the bass flaps them
+    const thin = viz.lite ? 2 : 1;                       // fewer feathers on devices that struggle
     vx.save(); vx.translate(cx, cy); vx.rotate(Math.PI / 4 + w * Math.PI / 2 + t * .025 + Math.sin(t * .35 + w) * .05);
-    const n = 52;
-    for (let j = 0; j < n; j++) {
-      const u = j / (n - 1), v = spec(u * .85);
-      const x = Rh * 1.45 + u * L, y = sway * u * u * L * .35;            // the wing bends as it sways
-      const width = Math.sin(Math.PI * Math.min(1, u * 1.1));              // feathers widest mid-wing
-      const barb = M * (.018 + .085 * width) * (.5 + v * .9);
-      const hue = (190 + u * 170 + t * 22 + w * 45) % 360;
-      vx.strokeStyle = `hsla(${hue}, 100%, ${62 + v * 14}%, ${.05 + v * .2})`;
-      vx.lineWidth = Math.max(1, (M / 900) * (1 + v * 2.2));
-      for (const side of [-1, 1]) {
-        const ang = side * (.45 + u * .55);                                  // barbs sweep out along the wing
-        vx.beginPath(); vx.moveTo(x, y);
-        vx.quadraticCurveTo(x + Math.cos(ang * .7) * barb * .55, y + Math.sin(ang * .7) * barb * .55,
-                            x + Math.cos(ang) * barb, y + Math.sin(ang) * barb);
-        vx.stroke();
+    for (const row of ROWS) {
+      for (let j = 0; j < row.n; j += thin) {
+        const u = row.from + (row.to - row.from) * j / (row.n - 1), v = spec(u * .85);
+        const x = Rh * 2.3 + u * L, y = sway * u * u * L * .35;
+        const width = Math.sin(Math.PI * Math.min(1, u * 1.05)) * .7 + .3;
+        const barb = M * .16 * row.len * width * (.55 + v * .85);
+        const hue = (190 + u * 170 + t * 22 + w * 45 + row.len * 40) % 360;
+        for (const side of [-1, 1]) {
+          const ang = side * (.35 + u * .6) * row.fan;                     // feathers fan out toward the tip
+          const ex = x + Math.cos(ang) * barb, ey = y + Math.sin(ang) * barb;
+          const mx = x + Math.cos(ang * .6) * barb * .55, my = y + Math.sin(ang * .6) * barb * .55;
+          vx.beginPath(); vx.moveTo(x, y); vx.quadraticCurveTo(mx, my, ex, ey);
+          vx.strokeStyle = `hsla(${hue}, 100%, 55%, ${(.015 + v * .05) * (1 + K * .6)})`;   // the glow
+          vx.lineWidth = (M / 900) * (5 + v * 9);
+          vx.stroke();
+          vx.strokeStyle = `hsla(${hue}, 100%, ${62 + v * 18 + HK * 14 * u}%, ${.07 + v * .25 + Hi * .25 * u})`;   // the core; tips flare on the highs
+          vx.lineWidth = Math.max(1, (M / 900) * (1 + v * 1.8));
+          vx.stroke();
+        }
       }
     }
     vx.restore();
+  }
+
+  // stardust: falling in, faster and faster as it nears the hole
+  if (!viz.dust) viz.dust = Array.from({ length: small_ ? 180 : 360 }, () => ({ r: Math.random(), a: Math.random() * 6.283, s: .0015 + Math.random() * .004, h: Math.random() * 360, w: .5 + Math.random() * 1.6 }));
+  for (const d of viz.dust) {
+    const R0 = Rh * 1.1 + d.r * (Rmax - Rh * 1.1), a0 = d.a;
+    d.a += (.003 + .018 / (d.r + .06)) * (1 + B * 1.5);
+    d.r -= d.s * (1 + B * 3 + K * 4);
+    if (d.r <= 0) { d.r = 1; d.a = Math.random() * 6.283; continue; }
+    const R1 = Rh * 1.1 + d.r * (Rmax - Rh * 1.1);
+    vx.strokeStyle = `hsla(${(d.h + t * 40) % 360}, 100%, 72%, ${.2 + (1 - d.r) * .45 + Hi * .3})`;
+    vx.lineWidth = d.w * (M / 900) * (1 + (1 - d.r) * 1.5);
+    vx.beginPath(); vx.moveTo(cx + Math.cos(a0) * R0, cy + Math.sin(a0) * R0); vx.lineTo(cx + Math.cos(d.a) * R1, cy + Math.sin(d.a) * R1); vx.stroke();
   }
 
   // three rings, tumbling in 3D through the eye
@@ -690,7 +731,7 @@ function frame(now) {
           const hue = (th * 57.3 + t * 30 + r.i * 120) % 360, lit = .45 + (z + 1) * .3;
           vx.strokeStyle = `hsla(${hue}, 100%, 60%, ${.1 * lit + B * .07})`; vx.lineWidth = ringW * 2.4;
           vx.beginPath(); vx.moveTo(prev[0], prev[1]); vx.lineTo(p[0], p[1]); vx.stroke();
-          vx.strokeStyle = `hsla(${hue}, 100%, 82%, ${.5 * lit})`; vx.lineWidth = ringW * .3;
+          vx.strokeStyle = `hsla(${hue}, 100%, 82%, ${(.32 + Hi * .45 + HK * .2) * lit})`; vx.lineWidth = ringW * (.26 + HK * .2);
           vx.beginPath(); vx.moveTo(prev[0], prev[1]); vx.lineTo(p[0], p[1]); vx.stroke();
         }
         prev = p;
@@ -723,7 +764,7 @@ function frame(now) {
   vx.globalAlpha = 1;
   for (let f = 0; f < 120; f++) {
     const a = f / 120 * Math.PI * 2 + t * .1, v = spec(f / 120), r1 = Rh * 1.03, r2 = Rh * (1.3 + v * .5);
-    vx.strokeStyle = `hsla(${(f * 3 + t * 40) % 360}, 100%, 72%, ${.08 + v * .3})`; vx.lineWidth = Math.max(1, M / 1200);
+    vx.strokeStyle = `hsla(${(f * 3 + t * 40) % 360}, 100%, ${72 + HK * 18}%, ${.08 + v * .3 + Hi * .2})`; vx.lineWidth = Math.max(1, M / 1200);
     vx.beginPath(); vx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1); vx.lineTo(Math.cos(a + .03) * r2, Math.sin(a + .03) * r2); vx.stroke();
   }
   // the lids: a neon almond around it all
@@ -745,7 +786,69 @@ function frame(now) {
   vx.beginPath(); vx.arc(cx, cy, Rh * 1.01, 0, Math.PI * 2); vx.stroke();
 
   drawRings(true);                                                         // the near side passes in front
+
+  // sparkles: the highs throw glints off the wing tips and the rings
+  viz.sparks = (viz.sparks || []).filter((p) => (p.life -= .045) > 0);
+  if (HK > .95) {
+    for (let n = 0; n < 10 + Math.floor(Hi * 24); n++) {
+      const tip = Math.random() < .6, a = Math.PI / 4 + Math.floor(Math.random() * 4) * Math.PI / 2 + (Math.random() - .5) * .5;
+      const r = tip ? Math.hypot(W, H) * (.2 + Math.random() * .3) : RR * (.8 + Math.random() * .5);
+      const ang = tip ? a : Math.random() * 6.283;
+      viz.sparks.push({ x: cx + Math.cos(ang) * r, y: cy + Math.sin(ang) * r, life: 1, hue: Math.random() * 360, size: (M / 900) * (3 + Math.random() * 8) });
+    }
+  }
+  vx.globalCompositeOperation = 'lighter';
+  for (const p of viz.sparks) {
+    const sz = p.size * (.4 + p.life);
+    vx.strokeStyle = `hsla(${p.hue}, 100%, 85%, ${p.life})`; vx.lineWidth = Math.max(1, sz / 5);
+    vx.beginPath(); vx.moveTo(p.x - sz, p.y); vx.lineTo(p.x + sz, p.y); vx.moveTo(p.x, p.y - sz); vx.lineTo(p.x, p.y + sz); vx.stroke();
+    vx.fillStyle = `rgba(255,255,255,${p.life})`; vx.beginPath(); vx.arc(p.x, p.y, sz / 4, 0, 6.283); vx.fill();
+  }
+
+  // lightning: on the big hits, arcs jump from the iris out to the rings
+  viz.arcs = (viz.arcs || []).filter((a) => (a.life -= .14) > 0);
+  if (K > .95 && viz.arcs.length < 6) {
+    for (let n = 0; n < 2 + Math.floor(Math.random() * 3); n++) {
+      const a0 = Math.random() * 6.283, r = rings[n % 3], p = pt(r, Math.random() * 6.283);
+      const pts = [[cx + Math.cos(a0) * Rh * 1.45, cy + Math.sin(a0) * Rh * 1.45]];
+      for (let k = 1; k <= 10; k++) {
+        const f = k / 10, x = pts[0][0] + (p[0] - pts[0][0]) * f, y = pts[0][1] + (p[1] - pts[0][1]) * f;
+        const j = k < 10 ? (Math.random() - .5) * Rh * .5 : 0;
+        pts.push([x + j, y + (Math.random() - .5) * Rh * .5 * (k < 10)]);
+      }
+      viz.arcs.push({ pts, life: 1, hue: Math.random() * 360 });
+    }
+  }
+  vx.globalCompositeOperation = 'lighter';
+  for (const arc of viz.arcs) {
+    for (const [wd, col] of [[Rh * .09, `hsla(${arc.hue}, 100%, 60%, ${.25 * arc.life})`], [Math.max(1.2, M / 700), `rgba(255,255,255,${.9 * arc.life})`]]) {
+      vx.strokeStyle = col; vx.lineWidth = wd; vx.beginPath();
+      arc.pts.forEach(([x, y], k) => (k ? vx.lineTo(x, y) : vx.moveTo(x, y))); vx.stroke();
+    }
+  }
   vx.globalCompositeOperation = 'source-over';
+
+  effects(W, H, B, K, t);
+}
+
+// What you see: the scene, punched toward you on the kicks, with bloom and flashes.
+// (Kept off the scene itself, so the inward spiral never feeds on its own glow.)
+function effects(W, H, B, K, t) {
+  const punch = 1 + K * .045 + B * .012;
+  ox.globalCompositeOperation = 'copy'; ox.globalAlpha = 1;
+  ox.drawImage(vc, W * (1 - punch) / 2, H * (1 - punch) / 2, W * punch, H * punch);
+  // bloom: a small, blurred copy laid back over the top
+  sx.globalCompositeOperation = 'copy';
+  if ('filter' in sx) sx.filter = 'blur(3px)';
+  sx.drawImage(vc, 0, 0, small.width, small.height);
+  if ('filter' in sx) sx.filter = 'none';
+  ox.globalCompositeOperation = 'lighter';
+  ox.globalAlpha = .3 + B * .22; ox.drawImage(small, W * (1 - punch) / 2, H * (1 - punch) / 2, W * punch, H * punch);
+  ox.globalAlpha = .08 + K * .18; ox.drawImage(small, -W * .015, -H * .015, W * 1.03, H * 1.03);
+  ox.globalAlpha = 1;
+  // the biggest hits flash
+  if (K > .97) { ox.fillStyle = `hsla(${(t * 90) % 360}, 100%, 60%, .07)`; ox.fillRect(0, 0, W, H); }
+  ox.globalCompositeOperation = 'source-over';
 }
 
 /* ---------------- visitors ---------------- */
