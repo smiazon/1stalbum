@@ -3,169 +3,224 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#2b3550">
 <title>new music every friday</title>
+<link rel="preload" as="image" href="img/sky.jpg" media="(min-width: 761px)">
+<link rel="preload" as="image" href="img/sky-small.jpg" media="(max-width: 760px)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&family=Caveat:wght@600&family=Reenie+Beanie&family=Rock+Salt&family=Homemade+Apple&family=Nothing+You+Could+Do&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; }
-  html, body { height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
   :root {
     /* Iowan Old Style is the book face in Apple Books; Literata stands in elsewhere */
     --book: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Literata', Georgia, serif;
-    --ink: #1d1d1f; --grey: #6e6e73; --faint: #c7c7cc; --hair: #e5e5ea; --blue: #0066cc;
+    --light: #fffdf8; --soft: rgba(255,253,248,.74); --dim: rgba(255,253,248,.42); --hair: rgba(255,253,248,.28);
+    --ink: #1d1d1f; --grey: #6e6e73; --blue: #0066cc;
+    --S: min(46vh, 34vw, 470px);           /* the square on the easel */
   }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; height: 100dvh; margin: 0; overflow: hidden; }
   body {
-    background: #fff; color: var(--ink);
-    font: 17px/1.47 var(--book);
+    color: var(--light); font: 17px/1.47 var(--book);
     -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    background: #2b3550 url(img/sky.jpg) center 62% / cover no-repeat;
   }
-  .link { color: var(--blue); text-decoration: none; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
-  .link:hover { text-decoration: underline; text-underline-offset: 3px; }
-  .link:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px; }
-  .link:disabled { color: #999; cursor: default; text-decoration: none; }
+  /* a soft shade on the left so the words sit on the sky */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none;
+    background: linear-gradient(90deg, rgba(20,22,40,.55) 0%, rgba(20,22,40,.28) 38%, rgba(20,22,40,0) 62%),
+                linear-gradient(0deg, rgba(10,10,14,.35) 0%, rgba(10,10,14,0) 30%);
+  }
+  /* clouds drifting across the photo, barely there */
+  .clouds { position: fixed; left: 0; right: 0; pointer-events: none; will-change: background-position; }
+  .clouds.a {
+    top: 6%; height: 52%; opacity: .16; filter: blur(1.5px);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='420'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0035 .009' numOctaves='5' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 2.2 -1.05'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url%28%23c%29'/%3E%3C/svg%3E") 0 0 / 1200px 100% repeat-x;
+    animation: drift 190s linear infinite;
+    -webkit-mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+  }
+  .clouds.b {
+    top: 38%; height: 40%; opacity: .12; filter: blur(3px);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='520'%3E%3Cfilter id='c' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0025 .007' numOctaves='5' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 .97  0 0 0 0 .95  0 0 0 2 -1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url%28%23c%29'/%3E%3C/svg%3E") 0 0 / 1600px 100% repeat-x;
+    animation: drift-b 300s linear infinite;
+    -webkit-mask: linear-gradient(transparent, #000 35%, #000 65%, transparent); mask: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+  }
+  @keyframes drift { to { background-position: -1200px 0; } }
+  @keyframes drift-b { to { background-position: -1600px 0; } }
 
-  header, footer {
-    position: fixed; left: 24px; right: 24px; display: flex; justify-content: space-between; font-size: 14px; letter-spacing: .01em;
+  .link { color: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; background: none; border: 0; padding: 0; font: inherit; }
+  button:focus-visible, .link:focus-visible { outline: 2px solid var(--light); outline-offset: 3px; border-radius: 2px; }
+
+  header {
+    position: fixed; top: 18px; left: 28px; right: 28px; z-index: 2;
+    display: flex; gap: 18px; font-size: 14px; letter-spacing: .01em; color: var(--soft);
   }
-  header { top: 16px; }
-  footer { bottom: 16px; color: var(--grey); }
+  header .grow { flex: 1; }
+  #wind { color: var(--dim); text-decoration: none; }
+  #wind.on { color: var(--soft); }
 
   main {
-    height: 100%; padding: 56px 24px;
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 56px;
-    align-items: center; max-width: 1180px; margin: 0 auto;
+    position: relative; z-index: 1; height: 100%; max-width: 1240px; margin: 0 auto; padding: 64px 28px 0;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 48px; align-items: start;
   }
-  .lead { font-size: clamp(24px, 3.3vw, 40px); line-height: 1.2; letter-spacing: -0.012em; margin: 0 0 24px; }
-  .line { height: 1px; background: var(--hair); margin: 0 0 12px; }
-  .line i { display: block; height: 1px; width: 0; background: var(--ink); }
-  .note { font-size: 14px; color: var(--grey); margin: 0; min-height: 21px; }
-  .concept { margin: 28px 0 24px; line-height: 1.55; }
-  
-  /* the twelve weeks: faint until their friday comes */
-  .weeks { display: flex; flex-wrap: wrap; gap: 4px 15px; margin: 0 0 16px; font-variant-numeric: lining-nums tabular-nums; }
-  .weeks span, .weeks button { font: inherit; padding: 0 0 1px; border: 0; background: none; color: var(--faint); }
-  .weeks .now { color: var(--ink); border-bottom: 1px solid var(--ink); }
-  .weeks button { color: var(--blue); cursor: pointer; }
-  .weeks button:hover { text-decoration: underline; text-underline-offset: 3px; }
-  .weeks button.playing { color: var(--ink); border-bottom: 1px solid var(--ink); }
 
-  /* ---------- the blank square: empty, until everyone signs it ---------- */
-  .book { --size: min(520px, calc(100dvh - 260px), 44vw); width: var(--size); }
-  .book .cap { display: flex; justify-content: space-between; font-size: 14px; color: var(--grey); margin-bottom: 10px; }
-  .sleeve {
-    position: relative; width: var(--size); aspect-ratio: 1; container-type: inline-size;
-    overflow: hidden; cursor: crosshair; user-select: none; touch-action: manipulation;
-    background:
-      radial-gradient(120% 90% at 30% 20%, #fdfcf9, #f3f1ea 70%, #ebe8df),
-      #f5f3ed;
-    box-shadow: 0 0 0 1px #e2dfd6, 0 1px 2px rgba(0,0,0,.06), 0 22px 40px -18px rgba(0,0,0,.28);
-  }
-  /* board texture */
-  .sleeve::before {
-    content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; opacity: .55;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.16 0 0 0 .84  .16 0 0 0 .84  .16 0 0 0 .82  0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-  /* blind emboss: pressed into the board, no ink */
-  .emboss {
-    position: absolute; pointer-events: none; color: #f1efe8; letter-spacing: .02em;
-    text-shadow: -1px -1px 0 rgba(0,0,0,.13), 1px 1px 0 rgba(255,255,255,.95);
-  }
-  .emboss.title { right: 7cqw; bottom: 9cqw; font: italic 3.6cqw var(--book); transform: rotate(-4deg); }
-  .emboss.serial { left: 6cqw; bottom: 6cqw; font: 2.6cqw 'Courier New', monospace; }
+  /* ---------- left: the words ---------- */
+  .text { padding-top: 6vh; max-width: 470px; text-shadow: 0 1px 14px rgba(10,12,30,.35); }
+  .lead { font-size: clamp(24px, 2.9vw, 38px); line-height: 1.2; letter-spacing: -0.012em; margin: 0 0 20px; }
+  .line { height: 1px; background: var(--hair); margin: 0 0 16px; }
+  .line i { display: block; height: 1px; width: 0; background: var(--light); }
+  .concept { margin: 0 0 22px; color: var(--soft); }
+  .note { font-size: 14px; color: var(--dim); min-height: 20px; margin: 14px 0 0; }
 
-  .sig { position: absolute; white-space: nowrap; line-height: 1; pointer-events: none; transform-origin: left center; opacity: .92; mix-blend-mode: multiply; }
-  .sig.artist { opacity: 1; }
-  .sig.new { animation: ink 1.2s ease-out; }
-  @keyframes ink { from { opacity: 0; filter: blur(2px); } }
-  .ghost { opacity: .45; pointer-events: auto; cursor: grab; touch-action: none; }
-  .ghost.dragging { cursor: grabbing; opacity: .75; }
-  .hint { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: #b8b5ad; font-style: italic; font-size: 3.6cqw; }
-  body.admin .sig:not(.ghost) { pointer-events: auto; cursor: not-allowed; }
-  body.admin .sig:not(.ghost):hover { outline: 1px dashed #b3261e; }
-
-  .signbar { display: flex; gap: 14px; align-items: flex-end; margin-top: 14px; }
-  .signbar input {
-    flex: 1; min-width: 0; font: 17px var(--book); padding: 3px 0;
-    border: 0; border-bottom: 1px solid var(--faint); border-radius: 0; outline: 0; background: transparent; color: var(--ink);
-  }
-  .signbar #name { flex: .7; } .signbar #contact { flex: 1.3; }
-  .signbar input::placeholder { color: #a1a1a6; }
-  .signbar input:focus { border-color: var(--blue); }
-  .pens { display: flex; gap: 6px; padding-bottom: 5px; }
-  .pens button { width: 14px; height: 14px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; }
-  .pens button.on { outline: 1px solid var(--ink); outline-offset: 2px; }
-  .msg { margin-top: 10px; font-size: 14px; font-style: italic; color: var(--grey); min-height: 20px; }
-  .signbar[hidden] { display: none; }
-
-  /* ---------- a track, before it exists: one quiet line ---------- */
-  .player {
-    position: relative; display: flex; align-items: center; gap: 14px;
-    padding: 10px 0; margin: 0 0 18px; border-bottom: 1px solid var(--hair);
-    font-size: 15px; color: var(--grey);
-  }
-  .player .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
-  .sk { display: block; width: 46%; height: 8px; border-radius: 4px; background: #ececf0; position: relative; overflow: hidden; }
+  /* a track, before it exists: one quiet line */
+  .player { position: relative; display: flex; align-items: center; gap: 14px; padding: 10px 0; margin: 0 0 10px; border-bottom: 1px solid var(--hair); font-size: 15px; }
+  .player .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .player .time { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--soft); }
+  .player .prog { position: absolute; left: 0; bottom: -1px; height: 1px; width: 0; background: var(--light); }
+  .sk { display: block; width: 46%; height: 8px; border-radius: 4px; background: rgba(255,255,255,.16); position: relative; overflow: hidden; }
   .sk::after {
     content: ''; position: absolute; inset: 0; transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
     animation: shimmer 2.6s ease-in-out infinite;
   }
   @keyframes shimmer { to { transform: translateX(100%); } }
   /* play button: a soft pastel rainbow ring, slowly turning */
   .pbtn {
     position: relative; isolation: isolate; width: 30px; height: 30px; flex: none; padding: 0;
-    border: 0; border-radius: 50%; background: #fff; color: var(--ink); cursor: pointer;
-    display: grid; place-items: center;
+    border: 0; border-radius: 50%; background: #fff; color: var(--ink); cursor: pointer; display: grid; place-items: center;
   }
   .pbtn::before, .pbtn::after {
     content: ''; position: absolute; inset: -1px; border-radius: 50%; z-index: -1;
     background: conic-gradient(#ffb3c6, #ffd6a5, #fdffb6, #caffbf, #9bf6ff, #a0c4ff, #bdb2ff, #ffc6ff, #ffb3c6);
     animation: turn 7s linear infinite;
   }
-  /* the ring itself */
   .pbtn::before {
     -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
             mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   }
-  /* and its glow */
-  .pbtn::after { inset: -3px; filter: blur(6px); opacity: .45; z-index: -2; }
+  .pbtn::after { inset: -3px; filter: blur(6px); opacity: .5; z-index: -2; }
   @keyframes turn { to { transform: rotate(1turn); } }
-  .pbtn:disabled { color: var(--faint); cursor: default; }
-  .pbtn:disabled::before { opacity: .7; }
-  .pbtn:disabled::after { opacity: .25; }
-  .pbtn:not(:disabled):hover::after { opacity: .7; }
-  .pbtn.on::before, .pbtn.on::after { animation-duration: 2.4s; }   /* turns faster while a song plays */
+  .pbtn:disabled { color: #b9b9be; cursor: default; }
+  .pbtn:disabled::after { opacity: .3; }
+  .pbtn.on::before, .pbtn.on::after { animation-duration: 2.4s; }
   .pbtn svg { width: 10px; height: 10px; margin-left: 2px; }
-  .player .time { font-variant-numeric: tabular-nums; font-size: 14px; }
-  /* the hairline under it fills as the song plays */
-  .player .prog { position: absolute; left: 0; bottom: -1px; height: 1px; width: 0; background: var(--ink); }
-  @media (prefers-reduced-motion: reduce) { .sk::after, .pbtn::before, .pbtn::after { animation: none; } }
 
-  @media (max-width: 860px) {
-    main { grid-template-columns: minmax(0, 1fr); gap: 22px; align-content: center; padding: 50px 18px 44px; }
-    .lead { font-size: 22px; margin-bottom: 14px; }
-    .concept { margin: 14px 0 12px; font-size: 15px; }
-    .weeks { margin-bottom: 0; font-size: 15px; gap: 2px 11px; }
+  /* the twelve songs */
+  .tracklist { list-style: none; margin: 0; padding: 0; font-size: 15px; font-variant-numeric: lining-nums tabular-nums; }
+  .tracklist li { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; padding: 2px 0; color: var(--dim); }
+  .tracklist .d { font-size: 13px; }
+  .tracklist li.now { color: var(--light); }
+  .tracklist li.now .t { font-style: italic; }
+  .tracklist li.out { color: var(--light); cursor: pointer; }
+  .tracklist li.out:hover .t, .tracklist li.playing .t { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ---------- right: the easel ---------- */
+  .stage { position: relative; width: var(--S); padding-top: 3vh; }
+  .easel { position: relative; width: var(--S); }
+  .easel svg { position: absolute; pointer-events: none; overflow: visible; }
+  .easel .back { left: calc(var(--S) * -.2); width: calc(var(--S) * 1.4); top: calc(var(--S) * -.1); height: calc(var(--S) * 3); z-index: 0; }
+  .easel .front { left: calc(var(--S) * -.2); width: calc(var(--S) * 1.4); top: calc(var(--S) * -.1); height: calc(var(--S) * 1.3); z-index: 3; }
+  .cap { position: absolute; top: calc(var(--S) * -.11); left: 0; right: 0; display: flex; justify-content: space-between; font-size: 13px; color: var(--soft); z-index: 4; text-shadow: 0 1px 8px rgba(0,0,0,.4); }
+
+  .sleeve {
+    position: relative; z-index: 2; width: var(--S); aspect-ratio: 1; container-type: inline-size;
+    overflow: hidden; user-select: none; touch-action: none; cursor: crosshair;
+    background: radial-gradient(120% 90% at 30% 20%, #fdfcf9, #f3f1ea 70%, #ebe8df), #f5f3ed;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 4px 6px 0 -1px #d9d4c7, 0 30px 50px -20px rgba(0,0,0,.6);
+  }
+  .sleeve::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; opacity: .55;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='.16 0 0 0 .84  .16 0 0 0 .84  .16 0 0 0 .82  0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .emboss { position: absolute; pointer-events: none; color: #f1efe8; letter-spacing: .02em; text-shadow: -1px -1px 0 rgba(0,0,0,.13), 1px 1px 0 rgba(255,255,255,.95); }
+  .emboss.title { right: 7cqw; bottom: 9cqw; font: italic 3.6cqw var(--book); transform: rotate(-4deg); }
+  .emboss.serial { left: 6cqw; bottom: 6cqw; font: 2.6cqw 'Courier New', monospace; }
+  #paint { position: absolute; inset: 0; width: 100%; height: 100%; mix-blend-mode: multiply; }
+
+  .sig { position: absolute; white-space: nowrap; line-height: 1; pointer-events: none; transform-origin: left center; opacity: .92; mix-blend-mode: multiply; }
+  .sig.artist { opacity: 1; }
+  .sig.new { animation: ink 1.2s ease-out; }
+  @keyframes ink { from { opacity: 0; filter: blur(2px); } }
+  .ghost { opacity: .45; }
+  .hint { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: #b8b5ad; font-style: italic; font-size: 3.6cqw; }
+  body.admin .sig:not(.ghost) { pointer-events: auto; cursor: not-allowed; }
+
+  /* ---------- the tools: hyper simple ---------- */
+  .tools {
+    position: relative; z-index: 4; margin-top: calc(var(--S) * .1);
+    padding: 10px 12px 8px; border-radius: 14px; color: var(--ink);
+    background: rgba(250,249,246,.9); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px -12px rgba(0,0,0,.45);
+    font-size: 15px;
+  }
+  .tools .row { display: flex; align-items: center; gap: 12px; }
+  .tools .grow { flex: 1; }
+  .dots { display: flex; align-items: center; gap: 7px; }
+  .dots button { border: 0; padding: 0; border-radius: 50%; cursor: pointer; background: var(--ink); }
+  .colors button { width: 16px; height: 16px; }
+  .sizes button { background: #8e8e93; }
+  .dots button.on { outline: 1.5px solid var(--ink); outline-offset: 2px; }
+  .sizes { padding-left: 10px; border-left: 1px solid rgba(0,0,0,.12); }
+  .tool { border: 0; background: none; cursor: pointer; padding: 2px 4px; font: 17px/1 var(--book); color: var(--ink); }
+  .tool:disabled { color: #c7c7cc; cursor: default; }
+  /* how much paint is left */
+  .ink { height: 3px; border-radius: 2px; background: rgba(0,0,0,.08); margin: 9px 0 8px; overflow: hidden; }
+  .ink i { display: block; height: 100%; width: 100%; background: var(--ink); border-radius: 2px; transition: width .12s linear, background .3s; }
+  .ink.low i { background: #b3261e; }
+  .fields input {
+    flex: 1; min-width: 0; font: 16px var(--book); padding: 3px 0; color: var(--ink);
+    border: 0; border-bottom: 1px solid rgba(0,0,0,.18); border-radius: 0; outline: 0; background: transparent;
+  }
+  .fields #name { flex: .7; }
+  .fields input::placeholder { color: #a1a1a6; }
+  .fields input:focus { border-color: var(--blue); }
+  .fields .link { color: var(--blue); text-decoration: none; }
+  .fields .link:hover { text-decoration: underline; }
+  .msg { font-size: 13px; font-style: italic; color: var(--grey); min-height: 18px; margin-top: 5px; }
+  .tools[hidden] { display: none; }
+  body.admin .sizes, body.admin #undo, body.admin #clear, body.admin .ink, body.admin #contact { display: none; }
+
+  .credit { position: fixed; right: 14px; bottom: 10px; font-size: 11px; color: var(--dim); text-decoration: none; z-index: 1; }
+
+  @media (prefers-reduced-motion: reduce) { .sk::after, .pbtn::before, .pbtn::after, .clouds { animation: none; } }
+
+  /* phones: words on top, the easel below */
+  @media (max-width: 760px) {
+    body { background-image: url(img/sky-small.jpg); background-position: 30% 60%; }
+    body::before { background: linear-gradient(180deg, rgba(20,22,40,.55) 0%, rgba(20,22,40,.2) 45%, rgba(10,10,14,.35) 100%); }
+    :root { --S: min(calc(100vw - 96px), calc(100dvh - 470px)); }
+    header { top: 14px; left: 18px; right: 18px; }
+    main { grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 44px 18px 0; justify-items: center; }
+    .text { padding-top: 0; justify-self: stretch; }
+    .lead { font-size: 21px; margin-bottom: 12px; }
+    .concept { font-size: 15px; margin-bottom: 8px; }
+    .line { margin-bottom: 10px; }
+    .player { margin-bottom: 4px; padding: 6px 0; }
     .note { display: none; }
-    .book { --size: min(calc(100vw - 36px), calc(100dvh - 530px)); width: 100%; }
-    .sleeve { margin: 0 auto; }
-    .book .cap { width: var(--size); margin-left: auto; margin-right: auto; }
-    .player { margin-bottom: 10px; }
-    footer { display: none; }
+    /* the tracklist folds into a row of numbers */
+    .tracklist { display: flex; gap: 0 11px; flex-wrap: wrap; }
+    .tracklist li { display: block; padding: 0; }
+    .tracklist .t, .tracklist .d { display: none; }
+    .tracklist li.now .n { border-bottom: 1px solid var(--light); }
+    .stage { padding-top: calc(var(--S) * .14); }
+    .tools { width: calc(100vw - 36px); margin-left: calc((var(--S) - (100vw - 36px)) / 2); margin-top: calc(var(--S) * .08); }
+    .credit { display: none; }
   }
 </style>
 </head>
 <body>
 
+<div class="clouds a" aria-hidden="true"></div>
+<div class="clouds b" aria-hidden="true"></div>
+
 <header>
-  <span>new music every friday.</span>
+  <span>new music every friday.</span><span class="grow"></span>
+  <button class="link" id="wind" aria-pressed="false">wind</button>
 </header>
 
 <main>
-  <!-- the countdown, in words -->
-  <div class="text">
+  <!-- left: the countdown, the songs -->
+  <section class="text">
     <p class="lead" id="lead">song one arrives in…</p>
     <div class="line"><i id="bar"></i></div>
     <p class="concept">i'm making and releasing one song a week for 12 weeks. album out jan 1st.</p>
@@ -177,56 +232,88 @@
       <span class="time" id="pLen">friday</span>
       <i class="prog" id="pBar"></i>
     </div>
-    <div class="weeks" id="weeks" aria-label="the twelve songs"></div>
-    <p class="note" id="note">&nbsp;</p>
-  </div>
+    <ol class="tracklist" id="tracklist" aria-label="the twelve songs"></ol>
+    <p class="note" id="note"></p>
+  </section>
 
-  <!-- the guestbook: a blank square everyone signs -->
-  <section class="book" aria-labelledby="sigCount">
-    <div class="cap"><span id="sigCount">no signatures yet</span><span id="week"></span></div>
-    <div class="sleeve" id="sleeve" role="img" aria-label="A blank white square, signed by visitors">
-      <span class="emboss title">new music every friday</span>
-      <span class="emboss serial" id="serial">no. 0000001</span>
-      <div class="hint" id="hint">tap anywhere to sign</div>
+  <!-- right: the square, on an easel -->
+  <section class="stage" aria-label="the square everyone paints on">
+    <div class="easel">
+      <svg class="back" viewBox="0 0 140 300" preserveAspectRatio="xMidYMin meet" aria-hidden="true">
+        <defs>
+          <linearGradient id="wood" x1="0" x2="1">
+            <stop offset="0" stop-color="#a9764a"/><stop offset=".5" stop-color="#8a5a35"/><stop offset="1" stop-color="#6a4327"/>
+          </linearGradient>
+          <linearGradient id="woodDark" x1="0" x2="1">
+            <stop offset="0" stop-color="#6a4327"/><stop offset="1" stop-color="#4c2f1b"/>
+          </linearGradient>
+        </defs>
+        <path d="M68.5 2 L71.5 2 L78 296 L73 296 Z" fill="url(#woodDark)"/>                 <!-- back leg -->
+        <path d="M66 0 L71 0 L13 298 L6 298 Z" fill="url(#wood)"/>                          <!-- left front leg -->
+        <path d="M69 0 L74 0 L134 298 L127 298 Z" fill="url(#wood)"/>                       <!-- right front leg -->
+        <rect x="67.5" y="-4" width="5" height="128" rx="1" fill="url(#wood)"/>               <!-- mast -->
+        <rect x="14" y="262" width="112" height="4" rx="1" fill="url(#woodDark)"/>           <!-- cross bar -->
+      </svg>
+      <span class="cap"><span id="sigCount"></span><span id="week"></span></span>
+      <div class="sleeve" id="sleeve">
+        <span class="emboss title">new music every friday</span>
+        <span class="emboss serial" id="serial">no. 0000001</span>
+        <canvas id="paint"></canvas>
+        <div class="hint" id="hint">paint something</div>
+      </div>
+      <svg class="front" viewBox="0 0 140 130" preserveAspectRatio="xMidYMin meet" aria-hidden="true">
+        <rect x="62" y="4" width="16" height="9" rx="1.5" fill="url(#wood)"/>                <!-- top clamp -->
+        <rect x="64" y="12.5" width="12" height="1.2" fill="rgba(0,0,0,.25)"/>
+        <rect x="14" y="110" width="112" height="6" rx="1" fill="url(#wood)"/>               <!-- ledge -->
+        <rect x="14" y="115.5" width="112" height="3" rx="1" fill="url(#woodDark)"/>
+        <rect x="14" y="107" width="112" height="3.4" rx="1" fill="#b98455"/>                <!-- lip -->
+      </svg>
     </div>
-    <form class="signbar" id="signForm" autocomplete="off">
-      <input id="name" maxlength="32" placeholder="name" required aria-label="your name">
-      <input id="contact" maxlength="80" placeholder="email or phone" required aria-label="email or phone, only we see it">
-      <div class="pens" id="pens" aria-label="pen"></div>
-      <button class="link" type="submit">sign</button>
+
+    <form class="tools" id="signForm" autocomplete="off">
+      <div class="row">
+        <div class="dots colors" id="colors" aria-label="colour"></div>
+        <div class="dots sizes" id="sizes" aria-label="brush size"></div>
+        <span class="grow"></span>
+        <button type="button" class="tool" id="undo" title="undo" aria-label="undo" disabled>&#8630;</button>
+        <button type="button" class="tool" id="clear" title="clear" aria-label="clear" disabled>&times;</button>
+      </div>
+      <div class="ink" id="ink" title="paint left"><i id="inkBar"></i></div>
+      <div class="row fields">
+        <input id="name" maxlength="32" placeholder="name" required aria-label="your name">
+        <input id="contact" maxlength="80" placeholder="email or phone" required aria-label="email or phone, only we see it">
+        <button class="link" type="submit">sign</button>
+      </div>
+      <div class="msg" id="msg"></div>
     </form>
-    <div class="msg" id="msg"></div>
   </section>
 </main>
 
-<footer>
-  <span id="peers"></span>
-</footer>
-
+<a class="credit" href="https://unsplash.com/photos/1506905925346-21bda4d32df4" target="_blank" rel="noopener">photo: unsplash</a>
 <audio id="audio" preload="none"></audio>
 
 <script>
 /* ---------------- the twelve fridays ---------------- */
 // One song a week, made that week. Each drops at midnight Eastern on its Friday.
-// When a song is finished, put the mp3 in public/tracks/ and set its src.
+// When a song is finished, put the mp3 in docs/tracks/ and set its src (and its title).
 const SONGS = [
-  { at: '2026-10-16T00:00:00-04:00', src: null },
-  { at: '2026-10-23T00:00:00-04:00', src: null },
-  { at: '2026-10-30T00:00:00-04:00', src: null },
-  { at: '2026-11-06T00:00:00-05:00', src: null },
-  { at: '2026-11-13T00:00:00-05:00', src: null },
-  { at: '2026-11-20T00:00:00-05:00', src: null },
-  { at: '2026-11-27T00:00:00-05:00', src: null },
-  { at: '2026-12-04T00:00:00-05:00', src: null },
-  { at: '2026-12-11T00:00:00-05:00', src: null },
-  { at: '2026-12-18T00:00:00-05:00', src: null },
-  { at: '2026-12-25T00:00:00-05:00', src: null },
-  { at: '2027-01-01T00:00:00-05:00', src: null },   // the last song, and the album
+  { at: '2026-10-16T00:00:00-04:00', src: null, title: null },
+  { at: '2026-10-23T00:00:00-04:00', src: null, title: null },
+  { at: '2026-10-30T00:00:00-04:00', src: null, title: null },
+  { at: '2026-11-06T00:00:00-05:00', src: null, title: null },
+  { at: '2026-11-13T00:00:00-05:00', src: null, title: null },
+  { at: '2026-11-20T00:00:00-05:00', src: null, title: null },
+  { at: '2026-11-27T00:00:00-05:00', src: null, title: null },
+  { at: '2026-12-04T00:00:00-05:00', src: null, title: null },
+  { at: '2026-12-11T00:00:00-05:00', src: null, title: null },
+  { at: '2026-12-18T00:00:00-05:00', src: null, title: null },
+  { at: '2026-12-25T00:00:00-05:00', src: null, title: null },
+  { at: '2027-01-01T00:00:00-05:00', src: null, title: null },   // the last song, and the album
 ].map((s) => ({ ...s, t: new Date(s.at).getTime() }));
 const STARTED = new Date('2026-10-09T00:00:00-04:00').getTime();   // week one began
 
-// The guestbook lives in Supabase (see supabase.sql). Paste the project URL and the anon / publishable key.
-// Both are meant to be public: visitors can only do what the functions in supabase.sql allow.
+// The guestbook lives in Supabase (see supabase.sql). Both values are meant to be public:
+// visitors can only do what the functions in supabase.sql allow.
 const BACKEND = {
   url: 'https://ggkfxynpjounkruwnlse.supabase.co',
   key: 'sb_publishable_rn4Jpr_0aCQHAX7_dUQbnQ_R7-RYZiW',
@@ -242,8 +329,10 @@ async function rpc(fn, args = {}) {
   if (!r.ok) throw new Error(body?.message || 'something went wrong, try again');
   return body;
 }
+const table = async (name, query) => (await fetch(`${BACKEND.url}/rest/v1/${name}?${query}`, { headers: headers() })).json();
 let clockSkew = 0;                             // server time minus this device's time
 const now = () => Date.now() + clockSkew;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 /* ---------------- the countdown, spelled out ---------------- */
 const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
@@ -261,6 +350,8 @@ function spelled(ms) {
   const last = part(sec, 'second');
   return bits.length ? `${bits.join(', ')} and ${last}` : last;
 }
+const songName = (i) => SONGS[i].title || `song ${words(i + 1)}`;
+const dateOf = (i) => new Date(SONGS[i].t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).toLowerCase();
 
 let peersText = '', shown = -1;
 function tick() {
@@ -268,7 +359,7 @@ function tick() {
   const out = SONGS.filter((s) => s.t <= t).length;            // songs released so far
   if (out < SONGS.length) {
     const next = SONGS[out], from = out ? SONGS[out - 1].t : STARTED;
-    const p = Math.min(1, Math.max(0, (t - from) / (next.t - from)));
+    const p = clamp((t - from) / (next.t - from), 0, 1);
     $('bar').style.width = (p * 100).toFixed(3) + '%';         // how much of this week is gone
     const what = out === SONGS.length - 1 ? 'song twelve and the album arrive' : `song ${words(out + 1)} arrives`;
     $('lead').textContent = `${what} in ${spelled(next.t - t)}.`;
@@ -276,60 +367,60 @@ function tick() {
     $('bar').style.width = '100%';
     $('lead').textContent = 'twelve songs. the album is here.';
   }
-  if (out !== shown) { drawWeeks(out); drawPlayer(out); shown = out; }
+  if (out !== shown) { drawTracklist(out); drawPlayer(out); shown = out; }
   if (!noteHold) $('note').textContent = peersText;
   windowTick(t);
 }
 
-// 01 to 12: released weeks play, this week is underlined, the rest wait
-function drawWeeks(out) {
-  const row = $('weeks'); row.innerHTML = '';
+// the tracklist: released songs play, this week's is being made, the rest wait
+function drawTracklist(out) {
+  const list = $('tracklist'); list.innerHTML = '';
   SONGS.forEach((s, i) => {
-    let el;
+    const li = document.createElement('li');
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = String(i + 1).padStart(2, '0');
+    const t = document.createElement('span'); t.className = 't';
+    const d = document.createElement('span'); d.className = 'd'; d.textContent = dateOf(i);
     if (i < out) {
-      el = document.createElement('button');
-      el.title = `play song ${words(i + 1)}`;
-      el.onclick = () => play(i, el);
+      li.className = 'out'; t.textContent = songName(i);
+      li.tabIndex = 0; li.setAttribute('role', 'button'); li.title = `play ${songName(i)}`;
+      li.onclick = () => play(i);
+      li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(i); } };
+    } else if (i === out) {
+      li.className = 'now'; t.textContent = 'being made';
     } else {
-      el = document.createElement('span');
-      if (i === out) { el.className = 'now'; el.title = 'being made this week'; }
+      t.textContent = '';
     }
-    el.textContent = String(i + 1).padStart(2, '0');
-    row.append(el);
+    li.append(n, t, d); list.append(li);
   });
 }
 
 // The player is an empty shell until a song is out; then it holds the newest one.
 function drawPlayer(out) {
-  const player = $('player');
-  if (!out) {
-    $('pPlay').disabled = true;
-    $('pLen').textContent = 'friday';
-    return;
-  }
+  if (!out) { $('pPlay').disabled = true; $('pLen').textContent = 'friday'; return; }
   const i = out - 1;
-  $('pTitle').textContent = `song ${words(i + 1)}`;
+  $('pTitle').textContent = songName(i);
   $('pLen').textContent = '';
   $('pPlay').disabled = false;
-  $('pPlay').onclick = () => play(i, document.querySelectorAll('.weeks button')[i]);
+  $('pPlay').onclick = () => play(i);
 }
 const clock = (sec) => isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}` : '–:––';
 
 /* ---------------- play: no pause, only start over ---------------- */
 const audio = $('audio');
 let playingIdx = -1, noteHold = false;
-function play(i, el) {
+function play(i) {
   const s = SONGS[i];
   if (!s.src) {
-    noteHold = true; $('note').textContent = `song ${words(i + 1)} is almost up. refresh in a minute.`;
+    noteHold = true; $('note').textContent = `${songName(i)} is almost up. refresh in a minute.`;
+    if (innerWidth <= 760) $('pLen').textContent = 'almost up';
     setTimeout(() => { noteHold = false; }, 4000);
     return;
   }
   if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;
   playingIdx = i;
-  $('pTitle').textContent = `song ${words(i + 1)}`;   // the player shows whichever week is playing
+  $('pTitle').textContent = songName(i);   // the player shows whichever song is playing
   audio.play();
-  document.querySelectorAll('.weeks button').forEach((b) => b.classList.toggle('playing', b === el));
+  [...$('tracklist').children].forEach((li, j) => li.classList.toggle('playing', j === i));
   $('pPlay').classList.add('on');
 }
 audio.addEventListener('pause', () => { if (!audio.ended) audio.play().catch(() => {}); });
@@ -338,7 +429,7 @@ audio.addEventListener('timeupdate', () => {
   $('pBar').style.width = (audio.currentTime / audio.duration * 100 || 0) + '%';
 });
 audio.addEventListener('ended', () => {
-  document.querySelectorAll('.weeks button').forEach((b) => b.classList.remove('playing'));
+  [...$('tracklist').children].forEach((li) => li.classList.remove('playing'));
   $('pPlay').classList.remove('on');
 });
 
@@ -346,8 +437,8 @@ audio.addEventListener('ended', () => {
 const me = Math.random().toString(36).slice(2);
 async function ping() {
   try {
-    const sent = Date.now();
     if (!online()) return;
+    const sent = Date.now();
     const r = await rpc('ping', { p_id: me });
     clockSkew = r.now - (sent + Date.now()) / 2;   // trust the server's clock, not this device's
     const others = r.peers - 1;
@@ -355,117 +446,121 @@ async function ping() {
     tick();
   } catch {}
 }
-if (online()) rpc('hit')
-  .then((count) => {
-    // every visitor gets their own numbered copy
-    $('serial').textContent = `no. ${String(count).padStart(7, '0')}`;
-  })
-  .catch(() => {});
+if (online()) rpc('hit').then((count) => {
+  // every visitor gets their own numbered copy
+  $('serial').textContent = `no. ${String(count).padStart(7, '0')}`;
+}).catch(() => {});
 
-/* ---------------- the guestbook ---------------- */
-// Guests sign it for twelve weeks. Then it closes, and we sign it.
-const ADMIN_KEY = (location.hash.match(/admin=([\w-]+)/) || [])[1];   // owner: #admin=<ADMIN_KEY>
-if (ADMIN_KEY) {
-  document.body.classList.add('admin');
-  const link = document.createElement('button');
-  link.className = 'link'; link.textContent = 'signers (csv)';
-  link.onclick = async () => {
-    let rows;
-    try { rows = await rpc('signers', { p_key: ADMIN_KEY }); } catch { return alert('could not load the list (check the admin key)'); }
-    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const csv = [['signed at', 'name', 'email or phone', 'still on the page']]
-      .concat(rows.map((r) => [r.signed_at, r.name, r.contact, r.still_on_page ? 'yes' : 'removed']))
-      .map((r) => r.map(cell).join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `signers-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click(); URL.revokeObjectURL(a.href);
-  };
-  document.querySelector('header').append(link);
-  const art = document.createElement('button');
-  art.className = 'link'; art.textContent = 'artwork (png)'; art.style.marginLeft = '18px';
-  art.onclick = () => downloadArtwork();
-  document.querySelector('header').append(art);
-}
-const PENS = ['#1b1b1b', '#1d3b8f', '#b3261e'];
-const pick = { color: PENS[0], x: null, y: null };
-const sleeve = $('sleeve'), msg = $('msg');
-let win = null, entries = [];
-const WEEK = 7 * 86400000;
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+/* ---------------- the square: everyone paints on it ---------------- */
+// Paint goes under the names already written on it. Each visitor gets a limited amount of paint.
+const COLORS = ['#1b1b1b', '#1d3b8f', '#b3261e', '#d9a21b'];
+const SIZES = [5, 12, 24];                 // brush widths, in thousandths of the square
+const INK = 80000;                         // stroke length × brush width, in square units (checked again by the database)
+const sleeve = $('sleeve'), canvas = $('paint'), ctx = canvas.getContext('2d'), msg = $('msg');
+const pen = { color: COLORS[0], size: SIZES[1] };
+let paintings = [];     // everyone's saved paintings: { id, strokes }
+let entries = [];       // names written on it (the first guestbook, and ours)
+let mine = [];          // this visitor's strokes, not yet signed
+let cur = null;         // the stroke being painted right now
+let win = null;         // the signing window
 
-function windowTick(t) {
-  if (!win) return;
-  const closed = t >= win.closes;
-  const week = clamp(Math.floor((t - win.opens) / WEEK) + 1, 1, 12);
-  const signedByUs = entries.some((s) => s.artist);
-  $('week').textContent = closed ? (signedByUs ? 'signed by us' : 'closed') : `week ${week} of 12`;
-  if (closed && !ADMIN_KEY && !$('signForm').hidden) {
-    $('signForm').hidden = true;
-    $('hint').textContent = '';
-    msg.textContent = signedByUs
-      ? `${entries.length - 1} people signed it. then we signed it.`
-      : `twelve weeks are up. ${entries.length} people signed it. now we sign it.`;
-  }
-}
+const ADMIN_KEY = (location.hash.match(/admin=([\w-]+)/) || [])[1];   // owner: #admin=<owner key>
+if (ADMIN_KEY) document.body.classList.add('admin');
 
-// the pens
-PENS.forEach((c) => {
-  const b = document.createElement('button');
-  b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'pen');
-  if (c === pick.color) b.classList.add('on');
-  b.onclick = () => {
-    pick.color = c;
-    [...$('pens').children].forEach((x) => x.classList.toggle('on', x === b));
-    drawGhost();
-  };
-  $('pens').append(b);
-});
-
-// The signed square as a 3000×3000 image, for the album cover. Owner mode only.
-async function downloadArtwork() {
-  const S = 3000, cq = S / 100;                        // 1cqw on the page = 30px here
-  const c = document.createElement('canvas'); c.width = c.height = S;
-  const g = c.getContext('2d');
-  await document.fonts.ready;
-  await Promise.all([...new Set(entries.map((s) => s.font || 'Caveat'))].map((f) => document.fonts.load(`80px '${f}'`)));
-
-  // the board: same soft light as on the page
-  const bg = g.createRadialGradient(S * .3, S * .2, 0, S * .3, S * .2, S * 1.2);
-  bg.addColorStop(0, '#fdfcf9'); bg.addColorStop(.58, '#f3f1ea'); bg.addColorStop(1, '#ebe8df');
-  g.fillStyle = bg; g.fillRect(0, 0, S, S);
-
-  // blind emboss: a shadow and a highlight, no ink
-  const book = getComputedStyle(document.body).fontFamily;
-  const emboss = (text, font, x, y, rot, align) => {
-    g.save(); g.translate(x, y); g.rotate(rot * Math.PI / 180);
-    g.font = font; g.textAlign = align; g.textBaseline = 'alphabetic';
-    g.fillStyle = 'rgba(0,0,0,.13)'; g.fillText(text, -3, -3);
-    g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText(text, 3, 3);
-    g.fillStyle = '#f1efe8'; g.fillText(text, 0, 0);
-    g.restore();
-  };
-  emboss('new music every friday', `italic ${3.6 * cq}px ${book}`, S - 7 * cq, S - 9 * cq, -4, 'right');
-
-  // every signature, where it sits on the page
-  g.globalCompositeOperation = 'multiply';
-  entries.forEach((s) => {
-    const size = (s.artist ? 9 : (s.size || 24) / 6.5) * cq;
-    g.save();
-    g.translate(s.x / 100 * S, s.y / 100 * S + size / 2);   // pivot on the left-middle, like the page
-    g.rotate((s.rot || 0) * Math.PI / 180);
-    g.globalAlpha = s.artist ? 1 : .92;
-    g.fillStyle = s.color; g.font = `${size}px '${s.font || 'Caveat'}', cursive`;
-    g.textBaseline = 'middle'; g.fillText(s.name, 0, 0);
-    g.restore();
+// picking a colour and a brush
+function dotRow(el, items, key, style) {
+  items.forEach((v) => {
+    const b = document.createElement('button');
+    b.type = 'button'; style(b, v);
+    if (pen[key] === v) b.classList.add('on');
+    b.onclick = () => { pen[key] = v; [...el.children].forEach((x) => x.classList.toggle('on', x === b)); drawGhost(); };
+    el.append(b);
   });
+}
+dotRow($('colors'), COLORS, 'color', (b, c) => { b.style.background = c; b.setAttribute('aria-label', 'colour'); });
+dotRow($('sizes'), SIZES, 'size', (b, s) => { const px = [7, 11, 16][SIZES.indexOf(s)]; b.style.width = b.style.height = px + 'px'; b.setAttribute('aria-label', 'brush size'); });
 
-  c.toBlob((blob) => {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = `1stalbum-cover-${new Date().toISOString().slice(0, 10)}.png`;
-    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }, 'image/png');
+// paint used, the same way the database measures it
+function inkOf(strokes) {
+  let used = 0;
+  for (const s of strokes) {
+    const p = s.p;
+    if (p.length === 2) { used += s.s * s.s; continue; }
+    for (let i = 2; i < p.length; i += 2) used += Math.hypot(p[i] - p[i - 2], p[i + 1] - p[i - 1]) * s.s;
+  }
+  return used;
+}
+const inkLeft = () => INK - inkOf(cur ? [...mine, cur] : mine);
+function updateTools() {
+  const left = Math.max(0, inkLeft()) / INK;
+  $('inkBar').style.width = (left * 100).toFixed(1) + '%';
+  $('ink').classList.toggle('low', left < .15);
+  $('undo').disabled = $('clear').disabled = !mine.length;
 }
 
+// drawing to the canvas
+function fitCanvas() {
+  const r = sleeve.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
+  canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+  redraw();
+}
+function strokePath(g, s, W) {
+  const p = s.p, k = W / 1000;
+  g.strokeStyle = g.fillStyle = s.c; g.lineWidth = s.s * k; g.lineCap = g.lineJoin = 'round';
+  if (p.length === 2) { g.beginPath(); g.arc(p[0] * k, p[1] * k, s.s * k / 2, 0, Math.PI * 2); g.fill(); return; }
+  g.beginPath(); g.moveTo(p[0] * k, p[1] * k);
+  for (let i = 2; i < p.length - 2; i += 2) {           // smooth through the midpoints
+    g.quadraticCurveTo(p[i] * k, p[i + 1] * k, (p[i] + p[i + 2]) / 2 * k, (p[i + 1] + p[i + 3]) / 2 * k);
+  }
+  g.lineTo(p[p.length - 2] * k, p[p.length - 1] * k);
+  g.stroke();
+}
+function redraw() {
+  const W = canvas.width;
+  ctx.clearRect(0, 0, W, W);
+  ctx.globalAlpha = .9;
+  paintings.forEach((d) => d.strokes.forEach((s) => strokePath(ctx, s, W)));
+  mine.forEach((s) => strokePath(ctx, s, W));
+  if (cur) strokePath(ctx, cur, W);
+  ctx.globalAlpha = 1;
+  $('hint').style.display = paintings.length || entries.length || mine.length || cur || ghost ? 'none' : 'grid';
+}
+
+const toUnits = (e) => {
+  const r = sleeve.getBoundingClientRect();
+  return [clamp(Math.round((e.clientX - r.left) / r.width * 1000), 0, 1000), clamp(Math.round((e.clientY - r.top) / r.height * 1000), 0, 1000)];
+};
+sleeve.addEventListener('pointerdown', (e) => {
+  if (ADMIN_KEY || $('signForm').hidden) return;
+  if (inkLeft() <= 0) { msg.textContent = 'out of paint. sign it, or undo.'; return; }
+  cur = { c: pen.color, s: pen.size, p: toUnits(e) };
+  sleeve.setPointerCapture(e.pointerId);
+  e.preventDefault();
+  redraw(); updateTools();
+});
+sleeve.addEventListener('pointermove', (e) => {
+  if (!cur) return;
+  const [x, y] = toUnits(e), p = cur.p;
+  const step = Math.hypot(x - p[p.length - 2], y - p[p.length - 1]);
+  if (step < 3) return;
+  if (inkLeft() - step * cur.s < 0) return;            // out of paint: the brush runs dry
+  p.push(x, y);
+  redraw(); updateTools();
+});
+const endStroke = () => {
+  if (!cur) return;
+  if (cur.p.length === 2 && inkLeft() < 0) cur = null;   // a dot you can't afford
+  else mine.push(cur);
+  cur = null;
+  redraw(); updateTools();
+  if (mine.length && !$('name').value) msg.textContent = 'add your name and email or phone, then sign it.';
+};
+sleeve.addEventListener('pointerup', endStroke);
+sleeve.addEventListener('pointercancel', endStroke);
+$('undo').onclick = () => { mine.pop(); redraw(); updateTools(); };
+$('clear').onclick = () => { mine = []; redraw(); updateTools(); };
+
+/* ---------------- names written on it ---------------- */
 function sigEl(s) {
   const el = document.createElement('div');
   el.className = 'sig' + (s.artist ? ' artist' : '');
@@ -479,104 +574,237 @@ function sigEl(s) {
   if (s.id) el.dataset.id = s.id;
   return el;
 }
-function render(freshId) {
+function renderNames(freshId) {
   sleeve.querySelectorAll('.sig:not(.ghost)').forEach((el) => el.remove());
   entries.forEach((s) => {
     const el = sigEl(s);
     if (s.id === freshId) el.classList.add('new');
     sleeve.append(el);
   });
-  $('hint').style.display = entries.length || pick.x != null ? 'none' : 'grid';
-  $('sigCount').textContent = entries.length ? `${entries.length} ${entries.length === 1 ? 'signature' : 'signatures'}` : 'no signatures yet';
+  const n = entries.length + paintings.length;
+  $('sigCount').textContent = n ? `${n} ${n === 1 ? 'signature' : 'signatures'}` : '';
+  redraw();
 }
 
-// placing your name: tap the square, then drag to adjust
+/* ---------------- owner mode: sign it as us, remove marks, download ---------------- */
 let ghost = null;
+const pick = { x: null, y: null };
 function drawGhost() {
   ghost?.remove(); ghost = null;
-  if (pick.x == null) return;
-  ghost = sigEl({ name: $('name').value.trim() || 'your name', color: pick.color, font: 'Caveat', x: pick.x, y: pick.y, rot: -4, size: 26, artist: !!ADMIN_KEY });
+  if (!ADMIN_KEY || pick.x == null) return;
+  ghost = sigEl({ name: $('name').value.trim() || 'us', color: pen.color, font: 'Rock Salt', x: pick.x, y: pick.y, rot: -4, artist: true });
   ghost.classList.add('ghost');
   sleeve.append(ghost);
-  $('hint').style.display = 'none';
+  redraw();
 }
-const toPct = (e) => {
-  const r = sleeve.getBoundingClientRect();
-  return [((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100];
-};
-let drag = null, swallow = false;
-sleeve.addEventListener('pointerdown', (e) => {
-  if (!e.target.classList.contains('ghost')) return;
-  const [px, py] = toPct(e);
-  drag = { ox: px - pick.x, oy: py - pick.y };
-  sleeve.setPointerCapture(e.pointerId); ghost.classList.add('dragging'); e.preventDefault();
-});
-sleeve.addEventListener('pointermove', (e) => {
-  if (!drag) return;
-  const [px, py] = toPct(e);
-  pick.x = clamp(px - drag.ox, 1, 86); pick.y = clamp(py - drag.oy, 4, 96);
-  Object.assign(ghost.style, { left: pick.x + '%', top: pick.y + '%' });
-});
-const endDrag = () => { if (!drag) return; drag = null; ghost?.classList.remove('dragging'); swallow = true; };
-sleeve.addEventListener('pointerup', endDrag);
-sleeve.addEventListener('pointercancel', endDrag);
-sleeve.addEventListener('click', async (e) => {
-  if (swallow) { swallow = false; return; }
-  const id = e.target.dataset?.id;
-  if (ADMIN_KEY && id && !e.target.classList.contains('ghost')) {
-    const s = entries.find((x) => x.id === id);
-    if (!confirm(`remove "${s?.name}"?`)) return;
-    try { await rpc('remove_signature', { p_key: ADMIN_KEY, p_id: id }); entries = entries.filter((x) => x.id !== id); render(); }
-    catch (err) { msg.textContent = err.message; }
-    return;
+// the painting under a point, if any (owner removal)
+function paintingAt(x, y) {
+  for (let k = paintings.length - 1; k >= 0; k--) {
+    for (const s of paintings[k].strokes) {
+      const p = s.p, reach = s.s / 2 + 8;
+      for (let i = 0; i < p.length; i += 2) {
+        const ax = p[i], ay = p[i + 1], bx = p[i + 2] ?? ax, by = p[i + 3] ?? ay;
+        const L = (bx - ax) ** 2 + (by - ay) ** 2, t = L ? clamp(((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / L, 0, 1) : 0;
+        if (Math.hypot(x - (ax + t * (bx - ax)), y - (ay + t * (by - ay))) <= reach) return paintings[k];
+      }
+    }
   }
-  if ($('signForm').hidden) return;
-  const [px, py] = toPct(e);
-  pick.x = clamp(px, 1, 86); pick.y = clamp(py, 4, 96);
-  drawGhost();
-  if (!$('name').value) $('name').focus();
-});
-$('name').addEventListener('input', drawGhost);
+  return null;
+}
+if (ADMIN_KEY) {
+  const add = (label, fn) => {
+    const b = document.createElement('button');
+    b.className = 'link'; b.textContent = label; b.onclick = fn;
+    document.querySelector('header').append(b);
+  };
+  add('signers (csv)', async () => {
+    let rows;
+    try { rows = await rpc('signers', { p_key: ADMIN_KEY }); } catch { return alert('could not load the list (check the owner key)'); }
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [['signed at', 'name', 'email or phone', 'still on the page']]
+      .concat(rows.map((r) => [r.signed_at, r.name, r.contact, r.still_on_page ? 'yes' : 'removed']))
+      .map((r) => r.map(cell).join(',')).join('\n');
+    save(new Blob([csv], { type: 'text/csv' }), `signers-${new Date().toISOString().slice(0, 10)}.csv`);
+  });
+  add('artwork (png)', () => downloadArtwork());
+  $('contact').required = false;
+  $('hint').textContent = 'tap where our signature goes';
+  sleeve.addEventListener('click', async (e) => {
+    const id = e.target.dataset?.id;
+    if (id && !e.target.classList.contains('ghost')) {
+      const s = entries.find((x) => x.id === id);
+      if (!confirm(`remove "${s?.name}"?`)) return;
+      try { await rpc('remove_signature', { p_key: ADMIN_KEY, p_id: id }); entries = entries.filter((x) => x.id !== id); renderNames(); }
+      catch (err) { msg.textContent = err.message; }
+      return;
+    }
+    const [x, y] = toUnits(e);
+    const hit = paintingAt(x, y);
+    if (hit) {
+      if (!confirm('remove this painting?')) return;
+      try { await rpc('remove_drawing', { p_key: ADMIN_KEY, p_id: hit.id }); paintings = paintings.filter((d) => d !== hit); renderNames(); }
+      catch (err) { msg.textContent = err.message; }
+      return;
+    }
+    pick.x = clamp(x / 10, 1, 86); pick.y = clamp(y / 10, 4, 96);
+    drawGhost();
+  });
+  $('name').addEventListener('input', drawGhost);
+}
+function save(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// The signed square as a 3000×3000 image, for the album cover.
+async function downloadArtwork() {
+  const S = 3000, cq = S / 100;                        // 1cqw on the page = 30px here
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  await document.fonts.ready;
+  await Promise.all([...new Set(entries.map((s) => s.font || 'Caveat'))].map((f) => document.fonts.load(`80px '${f}'`)));
+  const bg = g.createRadialGradient(S * .3, S * .2, 0, S * .3, S * .2, S * 1.2);
+  bg.addColorStop(0, '#fdfcf9'); bg.addColorStop(.58, '#f3f1ea'); bg.addColorStop(1, '#ebe8df');
+  g.fillStyle = bg; g.fillRect(0, 0, S, S);
+  // blind emboss
+  g.save(); g.translate(S - 7 * cq, S - 9 * cq); g.rotate(-4 * Math.PI / 180);
+  g.font = `italic ${3.6 * cq}px ${getComputedStyle(document.body).fontFamily}`; g.textAlign = 'right';
+  g.fillStyle = 'rgba(0,0,0,.13)'; g.fillText('new music every friday', -3, -3);
+  g.fillStyle = 'rgba(255,255,255,.95)'; g.fillText('new music every friday', 3, 3);
+  g.fillStyle = '#f1efe8'; g.fillText('new music every friday', 0, 0);
+  g.restore();
+  // the paint, then the names on top
+  g.globalCompositeOperation = 'multiply';
+  g.globalAlpha = .9;
+  paintings.forEach((d) => d.strokes.forEach((s) => strokePath(g, s, S)));
+  entries.forEach((s) => {
+    const size = (s.artist ? 9 : (s.size || 24) / 6.5) * cq;
+    g.save(); g.translate(s.x / 100 * S, s.y / 100 * S + size / 2); g.rotate((s.rot || 0) * Math.PI / 180);
+    g.globalAlpha = s.artist ? 1 : .92;
+    g.fillStyle = s.color; g.font = `${size}px '${s.font || 'Caveat'}', cursive`; g.textBaseline = 'middle';
+    g.fillText(s.name, 0, 0); g.restore();
+  });
+  c.toBlob((blob) => save(blob, `1stalbum-cover-${new Date().toISOString().slice(0, 10)}.png`), 'image/png');
+}
+
+/* ---------------- signing ---------------- */
 // say the rules only when they matter
 $('contact').addEventListener('focus', () => { msg.textContent = 'only we see your email or phone. one signature a day.'; });
-$('contact').addEventListener('blur', () => { if (msg.textContent.startsWith('only we see')) msg.textContent = ''; });
 
 $('signForm').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const btn = e.target.querySelector('[type=submit]'); btn.disabled = true; msg.textContent = 'signing…';
+  const btn = e.target.querySelector('[type=submit]'); btn.disabled = true;
   try {
-    if (!online()) throw new Error('the guestbook opens soon.');
-    const place = { p_name: $('name').value, p_color: pick.color, p_x: pick.x, p_y: pick.y };
-    const s = ADMIN_KEY
-      ? await rpc('artist_sign', { p_key: ADMIN_KEY, ...place })          // our signature
-      : await rpc('sign', { ...place, p_contact: $('contact').value });
+    if (!online()) throw new Error('the square opens soon.');
+    if (ADMIN_KEY) {                                   // our signature, in marker
+      if (pick.x == null) throw new Error('tap where it goes first.');
+      msg.textContent = 'signing…';
+      const s = await rpc('artist_sign', { p_key: ADMIN_KEY, p_name: $('name').value, p_color: pen.color, p_x: pick.x, p_y: pick.y });
+      pick.x = pick.y = null; drawGhost();
+      entries.push(s); renderNames(s.id);
+    } else {
+      if (!mine.length) throw new Error('paint something first.');
+      msg.textContent = 'signing…';
+      const d = await rpc('draw', { p_name: $('name').value, p_contact: $('contact').value, p_strokes: mine });
+      paintings.push(d); mine = [];
+      renderNames(); updateTools();
+    }
     e.target.reset();
-    pick.x = pick.y = null; drawGhost();
-    entries.push(s); render(s.id);
-    msg.textContent = 'thank you. your name is on it now.';
+    msg.textContent = 'thank you. you’re on it now.';
   } catch (err) {
     msg.textContent = err.message || 'something went wrong, try again';
   }
   btn.disabled = false;
 });
 
-async function loadWindow() {
-  try {
-    win = { opens: new Date(SIGNING.opens).getTime(), closes: new Date(SIGNING.closes).getTime() };
-    entries = online()
-      ? await (await fetch(`${BACKEND.url}/rest/v1/signatures?select=*&order=created_at.asc`, { headers: headers() })).json()
-      : [];
-    render();
-    tick();
-  } catch {}
+// Twelve weeks of signing, then it closes and we sign it.
+const WEEK = 7 * 86400000;
+function windowTick(t) {
+  if (!win) return;
+  const closed = t >= win.closes;
+  const week = clamp(Math.floor((t - win.opens) / WEEK) + 1, 1, 12);
+  const signedByUs = entries.some((s) => s.artist);
+  $('week').textContent = closed ? (signedByUs ? 'signed by us' : 'closed') : `week ${week} of 12`;
+  if (closed && !ADMIN_KEY && !$('signForm').hidden) {
+    $('signForm').hidden = true;
+    $('hint').textContent = '';
+    $('note').textContent = signedByUs ? 'twelve weeks of you. then we signed it.' : 'twelve weeks are up. now we sign it.';
+    noteHold = true;
+  }
 }
-if (ADMIN_KEY) $('contact').required = false;
+
+async function load() {
+  win = { opens: new Date(SIGNING.opens).getTime(), closes: new Date(SIGNING.closes).getTime() };
+  if (online()) {
+    try {
+      const [names, paint] = await Promise.all([
+        table('signatures', 'select=*&order=created_at.asc'),
+        table('drawings', 'select=id,strokes&order=created_at.asc'),
+      ]);
+      entries = Array.isArray(names) ? names : [];
+      paintings = Array.isArray(paint) ? paint : [];
+    } catch {}
+  }
+  renderNames();
+  tick();
+}
+
+/* ---------------- wind: quiet, made in the browser ---------------- */
+// Filtered noise that slowly swells and settles. Browsers only allow sound after a tap or click,
+// so it fades in on the first one. It steps aside while a song plays.
+const wind = { ctx: null, out: null, on: true, started: false };
+function startWind() {
+  if (wind.started || !wind.on) return;
+  wind.started = true;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  const c = wind.ctx = new AC();
+  const buf = c.createBuffer(1, c.sampleRate * 4, c.sampleRate);
+  const data = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < data.length; i++) { last = (last + .02 * (Math.random() * 2 - 1)) / 1.02; data[i] = last * 3.5; }   // brown-ish noise
+  const out = wind.out = c.createGain(); out.gain.value = 0; out.connect(c.destination);
+  // two layers: a low body and a higher whistle, each breathing at its own pace
+  [[380, .7, .055, .9], [900, 1.8, .025, .13]].forEach(([freq, q, level, rate]) => {
+    const src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+    src.playbackRate.value = rate === .9 ? 1 : 1.3;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+    const g = c.createGain(); g.gain.value = level;
+    const lfo = c.createOscillator(); lfo.frequency.value = .05 + Math.random() * .06;
+    const depth = c.createGain(); depth.gain.value = freq * .45;
+    lfo.connect(depth).connect(bp.frequency);
+    const swell = c.createOscillator(); swell.frequency.value = .03 + Math.random() * .04;
+    const sdepth = c.createGain(); sdepth.gain.value = level * .6;
+    swell.connect(sdepth).connect(g.gain);
+    src.connect(bp).connect(g).connect(out);
+    src.start(); lfo.start(); swell.start();
+  });
+  setWind();
+}
+function setWind() {
+  $('wind').classList.toggle('on', wind.on);
+  $('wind').setAttribute('aria-pressed', String(wind.on));
+  if (!wind.ctx) return;
+  if (wind.ctx.state === 'suspended') wind.ctx.resume();
+  const target = wind.on && audio.paused ? .9 : 0;       // quiet under nothing, silent under a song
+  wind.out.gain.cancelScheduledValues(wind.ctx.currentTime);
+  wind.out.gain.setTargetAtTime(target, wind.ctx.currentTime, target ? 1.2 : .4);
+}
+['pointerdown', 'keydown', 'touchstart'].forEach((ev) => addEventListener(ev, startWind, { once: true, passive: true }));
+$('wind').onclick = (e) => { e.stopPropagation(); wind.on = !wind.on; if (!wind.started) startWind(); setWind(); };
+audio.addEventListener('play', setWind);
+audio.addEventListener('ended', setWind);
+setWind();
 
 /* ---------------- go ---------------- */
+addEventListener('resize', fitCanvas);
+new ResizeObserver(fitCanvas).observe(sleeve);
+fitCanvas(); updateTools();
 tick(); setInterval(tick, 1000);
 ping(); setInterval(ping, 20000);
-loadWindow();
-document.fonts.ready.then(() => render());
+load();
+document.fonts.ready.then(() => renderNames());
 </script>
 </body>
 </html>

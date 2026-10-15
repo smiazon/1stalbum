@@ -216,6 +216,108 @@ begin
   return json_build_object('peers', greatest(1, n), 'now', floor(extract(epoch from now()) * 1000));
 end $$;
 
+-- ---------- paint: visitors paint on the square ----------
+-- A painting is a list of strokes: { c: colour, s: brush size, p: [x0, y0, x1, y1, ...] } in 0..1000 square units.
+-- Ink is limited: the length of every stroke times its brush size must stay under 80,000.
+
+create table if not exists public.drawings (
+  id         uuid primary key default gen_random_uuid(),
+  strokes    jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table public.drawings enable row level security;
+drop policy if exists "anyone can see drawings" on public.drawings;
+create policy "anyone can see drawings" on public.drawings for select using (true);
+alter table private.contacts add column if not exists drawing_id uuid references public.drawings(id) on delete set null;
+
+-- checks a painting, rebuilds it with only the allowed fields, and measures its ink
+create or replace function private.clean_strokes(p jsonb, out strokes jsonb, out ink numeric)
+language plpgsql immutable as $$
+declare st jsonb; n int; i int; total int := 0; sz int; col text; arr int[]; clean jsonb := '[]'::jsonb;
+begin
+  ink := 0;
+  if p is null or jsonb_typeof(p) <> 'array' or jsonb_array_length(p) = 0 then raise exception 'paint something first'; end if;
+  if jsonb_array_length(p) > 150 then raise exception 'too many strokes'; end if;
+  for st in select value from jsonb_array_elements(p) loop
+    col := st->>'c';
+    sz := (st->>'s')::int;
+    if col is null or col not in ('#1b1b1b', '#1d3b8f', '#b3261e', '#d9a21b') then raise exception 'unknown colour'; end if;
+    if sz is null or sz not in (5, 12, 24) then raise exception 'unknown brush'; end if;
+    if jsonb_typeof(st->'p') <> 'array' then raise exception 'bad stroke'; end if;
+    n := jsonb_array_length(st->'p');
+    if n < 2 or n % 2 = 1 then raise exception 'bad stroke'; end if;
+    total := total + n / 2;
+    if total > 3000 then raise exception 'too much paint'; end if;
+    select array_agg(greatest(0, least(1000, round(v::numeric)))::int order by k)
+      into arr from jsonb_array_elements_text(st->'p') with ordinality as e(v, k);
+    if n = 2 then ink := ink + sz * sz;          -- a dot
+    else
+      i := 3;
+      while i <= n loop
+        ink := ink + sqrt(power(arr[i] - arr[i - 2], 2) + power(arr[i + 1] - arr[i - 1], 2)) * sz;
+        i := i + 2;
+      end loop;
+    end if;
+    clean := clean || jsonb_build_array(jsonb_build_object('c', col, 's', sz, 'p', to_jsonb(arr)));
+  end loop;
+  strokes := clean;
+end $$;
+
+-- Paint on the square. Same rules as signing: one per email/phone per day, at most 3 per network per day.
+create or replace function public.draw(p_name text, p_contact text, p_strokes jsonb)
+returns public.drawings language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare
+  n text := left(btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g')), 32);
+  c text := private.norm_contact(p_contact);
+  d date := private.today();
+  ip text := private.client_ip();
+  ih text := case when ip is null then null else encode(digest(ip, 'sha256'), 'hex') end;
+  cs record;
+  r public.drawings;
+begin
+  if n = '' then raise exception 'add your name'; end if;
+  if private.is_blocked(n) then raise exception 'let''s keep it kind. try another name.'; end if;
+  if c is null then raise exception 'enter a valid email or phone number'; end if;
+  if now() >= (select closes_at from private.settings) then raise exception 'signing is closed. now we sign it.'; end if;
+  if (select count(*) from public.drawings) >= 1200 then raise exception 'there''s no room left'; end if;
+  select * into cs from private.clean_strokes(p_strokes);
+  if cs.ink > 82400 then raise exception 'out of ink'; end if;
+  if exists (select 1 from private.contacts where contact = c and day = d) then
+    raise exception 'you already signed today. come back tomorrow.';
+  end if;
+  if ih is not null then
+    if exists (select 1 from private.contacts where ip_hash = ih and created_at > now() - interval '5 seconds') then
+      raise exception 'slow down';
+    end if;
+    if (select count(*) from private.contacts where ip_hash = ih and day = d) >= 3 then
+      raise exception 'you already signed today. come back tomorrow.';
+    end if;
+  end if;
+  insert into public.drawings (strokes) values (cs.strokes) returning * into r;
+  insert into private.contacts (drawing_id, name, contact, ip_hash, day) values (r.id, n, c, ih, d);
+  return r;
+exception when unique_violation then
+  raise exception 'you already signed today. come back tomorrow.';
+end $$;
+
+create or replace function public.remove_drawing(p_key text, p_id uuid) returns boolean
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  delete from public.drawings where id = p_id;
+  return found;
+end $$;
+
+-- the signer list counts paintings too
+create or replace function public.signers(p_key text)
+returns table (signed_at timestamptz, name text, contact text, still_on_page boolean)
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  return query select c.created_at, c.name, c.contact, (c.signature_id is not null or c.drawing_id is not null)
+               from private.contacts c order by c.created_at;
+end $$;
+
 -- only these functions are open to the website; the helpers and private tables are not
 revoke all on schema private from public;
 revoke all on all functions in schema private from public;
@@ -225,7 +327,11 @@ grant execute on function public.remove_signature(text, uuid) to anon, authentic
 grant execute on function public.signers(text) to anon, authenticated;
 grant execute on function public.hit() to anon, authenticated;
 grant execute on function public.ping(text) to anon, authenticated;
+grant execute on function public.draw(text, text, jsonb) to anon, authenticated;
+grant execute on function public.remove_drawing(text, uuid) to anon, authenticated;
 grant select on public.signatures to anon, authenticated;
+grant select on public.drawings to anon, authenticated;
 revoke insert, update, delete on public.signatures from anon, authenticated;
+revoke insert, update, delete on public.drawings from anon, authenticated;
 
 -- Your owner key (keep it secret): run   select admin_key from private.settings;

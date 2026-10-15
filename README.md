@@ -3,7 +3,11 @@
 new music every friday. one song a week for 12 weeks, album out jan 1st.
 
 The page counts down to the next Friday in words, plays each week's song once it's out (no pause, only start over),
-and has a blank white square that visitors sign for the twelve weeks. On January 1st signing closes and we sign it too.
+and has a blank white square on an easel, in front of a mountain sky, that visitors paint on for the twelve weeks
+(a limited amount of paint each, under the names already written there). On January 1st signing closes and we sign it too.
+A quiet wind plays after your first tap (toggle: "wind", top right), and faint clouds drift across the photo.
+
+Background photo: Unsplash (https://unsplash.com/license), stored in `docs/img/`.
 
 - **Site:** GitHub Pages, published from the `docs/` folder on `main` (Settings → Pages → Deploy from a branch).
 - **Guestbook:** a free Supabase project, set up by `supabase.sql`.
@@ -25,7 +29,7 @@ The twelve release times are the `SONGS` list at the top of the script in `docs/
 (midnight Eastern, Oct 16 2026 to Jan 1 2027). When a song is finished:
 
 1. Put the mp3 in `docs/tracks/` (e.g. `docs/tracks/01.mp3`).
-2. Set that week's `src`, e.g. `{ at: '2026-10-16T00:00:00-04:00', src: 'tracks/01.mp3' }`.
+2. Set that week's `src` and `title`, e.g. `{ at: '2026-10-16T00:00:00-04:00', src: 'tracks/01.mp3', title: 'im so inlove' }`.
 3. Commit and push before midnight. Its number turns into a play link at exactly its Friday.
 
 ## Owner mode
@@ -33,7 +37,7 @@ The twelve release times are the `SONGS` list at the top of the script in `docs/
 Open `https://smiazon.github.io/1stalbum/#admin=<owner key>`:
 
 - **Sign it as us:** tap a spot, type the name, press sign. No email needed, works after signing closes, written larger.
-- **Remove a signature:** click it.
+- **Remove a signature or a painting:** click it.
 - **Who signed:** click **signers (csv)** top right for every name, email or phone, and time.
 - **The cover:** click **artwork (png)** to download the signed square as a 3000×3000 image, every signature in place.
   Signatures stay saved from day one through Jan 1; nothing resets between weeks.
