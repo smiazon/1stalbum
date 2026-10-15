@@ -360,7 +360,7 @@ const STARTED = new Date('2026-10-09T00:00:00-04:00').getTime();   // week one b
 // Local preview only (http://localhost:3017/?preview): pretend song one is out, using the local mp3.
 // Never active on the real site.
 const PREVIEW = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('preview');
-if (PREVIEW) Object.assign(SONGS[0], { src: 'tracks/01.mp3', title: SONGS[0].title || 'IM SO INLOVE' });
+if (PREVIEW) Object.assign(SONGS[0], { src: 'tracks/01.mp3' });
 
 // The guestbook lives in Supabase (see supabase.sql). Both values are meant to be public:
 // visitors can only do what the functions in supabase.sql allow.
