@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>1stalbum, owner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --book: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Literata', Georgia, serif;
+    --bg: #fffdf8; --ink: #1d1d1f; --grey: #6e6e73; --hair: #e6e2d8; --blue: #0066cc; --row: #f6f3ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141416; --ink: #f2f0ea; --grey: #9a9aa0; --hair: #2c2c30; --blue: #5aa2ff; --row: #1c1c1f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.47 var(--book); -webkit-font-smoothing: antialiased; }
+  main { max-width: 980px; margin: 0 auto; padding: 48px 16px 80px; }
+  h1 { font-weight: 400; font-size: 28px; margin: 0 0 4px; letter-spacing: -.01em; }
+  h2 { font-weight: 400; font-size: 20px; margin: 48px 0 12px; }
+  .sub { color: var(--grey); margin: 0; font-size: 15px; }
+  a { color: var(--blue); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 24px; margin-top: 36px; }
+  .stat b { display: block; font-weight: 400; font-size: 40px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--grey); font-size: 15px; }
+  .live::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #34c759; margin-right: 7px; vertical-align: 2px; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  .chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; border-bottom: 1px solid var(--hair); }
+  .chart div { flex: 1; min-width: 3px; max-width: 28px; background: var(--ink); opacity: .82; border-radius: 2px 2px 0 0; position: relative; }
+  .chart div:hover { opacity: 1; }
+  .chart div:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 13px; background: var(--ink); color: var(--bg); padding: 2px 7px; border-radius: 5px; }
+  .axis { display: flex; justify-content: space-between; color: var(--grey); font-size: 13px; margin-top: 6px; }
+  .note { color: var(--grey); font-size: 14px; margin-top: 10px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  input[type=search] { font: 16px var(--book); color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--hair); padding: 6px 0; width: min(320px, 100%); outline: none; }
+  input[type=search]:focus { border-color: var(--ink); }
+  button { font: 15px var(--book); color: var(--ink); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+  button:hover { border-color: var(--ink); }
+  .wrap { overflow-x: auto; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font-weight: 400; color: var(--grey); padding: 8px 10px; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+  tbody tr:hover { background: var(--row); }
+  td.when { white-space: nowrap; color: var(--grey); font-variant-numeric: tabular-nums; }
+  td.contact { word-break: break-all; }
+  .off { color: var(--grey); font-style: italic; }
+  .msg { margin-top: 80px; text-align: center; color: var(--grey); }
+  @media (max-width: 640px) { main { padding-top: 32px; } .stat b { font-size: 32px; } th.kind, td.kind { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>1stalbum</h1>
+  <p class="sub" id="sub">loading…</p>
+  <div id="body" hidden>
+    <div class="stats">
+      <div class="stat"><b id="visits">0</b><span>visits</span></div>
+      <div class="stat"><b id="today">0</b><span>visits today</span></div>
+      <div class="stat"><b id="here">0</b><span class="live">here right now</span></div>
+      <div class="stat"><b id="signed">0</b><span>people signed</span></div>
+      <div class="stat"><b id="onCanvas">0</b><span>marks on the canvas</span></div>
+    </div>
+
+    <h2>visitors, per day</h2>
+    <div class="chart" id="chart"></div>
+    <div class="axis"><span id="axisA"></span><span id="axisB"></span></div>
+    <p class="note">Visits are counted, not named. Nobody gives a name or email just to look. Days are counted from Oct 17. Earlier visits are only in the total.</p>
+
+    <h2>everyone who signed</h2>
+    <div class="bar">
+      <input type="search" id="q" placeholder="search a name, email or phone" autocomplete="off">
+      <button id="csv">download csv</button>
+    </div>
+    <div class="wrap">
+      <table>
+        <thead><tr><th>when (eastern)</th><th>name</th><th>email or phone</th><th class="kind">what</th><th>on the canvas</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <p class="note"><a id="canvasLink" href="./">open the canvas in owner mode</a></p>
+  </div>
+  <p class="msg" id="msg" hidden></p>
+</main>
+<script>
+const BACKEND = { url: 'https://ggkfxynpjounkruwnlse.supabase.co', key: 'sb_publishable_rn4Jpr_0aCQHAX7_dUQbnQ_R7-RYZiW' };
+const KEY = (location.hash.match(/admin=([\w-]+)/) || [])[1];
+const $ = (id) => document.getElementById(id);
+const ET = 'America/New_York';
+const when = (t) => new Date(t).toLocaleString('en-US', { timeZone: ET, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const dayLabel = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let data = null;
+
+async function load() {
+  const r = await fetch(`${BACKEND.url}/rest/v1/rpc/owner_dashboard`, {
+    method: 'POST',
+    headers: { apikey: BACKEND.key, Authorization: `Bearer ${BACKEND.key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_key: KEY }),
+  });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((j && j.message) || `error ${r.status}`);
+  return j;
+}
+
+function render() {
+  const d = data, days = d.visits_by_day || [], people = d.signers || [];
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: ET });
+  $('visits').textContent = Number(d.visits_total).toLocaleString();
+  $('today').textContent = ((days.find((x) => x.day === todayKey) || {}).visits || 0).toLocaleString();
+  $('here').textContent = d.here_now;
+  $('signed').textContent = people.filter((p) => !p.owner).length.toLocaleString();
+  $('onCanvas').textContent = (d.names_on_canvas + d.paintings_on_canvas).toLocaleString();
+  $('sub').textContent = `updated ${when(d.now)}${d.hidden ? ` · ${d.hidden} hidden, kept safe` : ''}`;
+
+  const max = Math.max(1, ...days.map((x) => x.visits));
+  $('chart').innerHTML = days.length
+    ? days.map((x) => `<div style="height:${Math.max(2, (x.visits / max) * 100)}%" data-tip="${dayLabel(x.day)}: ${x.visits}"></div>`).join('')
+    : '';
+  $('axisA').textContent = days.length ? dayLabel(days[0].day) : '';
+  $('axisB').textContent = days.length > 1 ? dayLabel(days[days.length - 1].day) : '';
+  rows();
+}
+
+function rows() {
+  const q = $('q').value.trim().toLowerCase();
+  const list = data.signers.filter((p) => !q || `${p.name} ${p.contact}`.toLowerCase().includes(q));
+  $('rows').innerHTML = list.length ? list.map((p) => `<tr>
+    <td class="when">${when(p.at)}</td>
+    <td>${esc(p.name)}${p.owner ? ' <span class="off">(you)</span>' : ''}</td>
+    <td class="contact">${esc(p.contact)}</td>
+    <td class="kind">${p.kind === 'painting' ? 'painted' : 'wrote their name'}</td>
+    <td>${p.showing ? 'yes' : '<span class="off">hidden</span>'}</td>
+  </tr>`).join('') : `<tr><td colspan="5" class="off">${q ? 'no one matches' : 'no one yet'}</td></tr>`;
+}
+
+function csv() {
+  const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [['signed at (eastern)', 'name', 'email or phone', 'what', 'on the canvas'].map(cell).join(',')]
+    .concat(data.signers.map((p) => [when(p.at), p.name, p.contact, p.kind === 'painting' ? 'painted' : 'name', p.showing ? 'yes' : 'hidden'].map(cell).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+  a.download = `1stalbum-signers-${new Date().toLocaleDateString('en-CA', { timeZone: ET })}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function fail(text) { $('body').hidden = true; $('sub').textContent = ''; $('msg').hidden = false; $('msg').textContent = text; }
+
+async function tick() {
+  try { data = await load(); $('msg').hidden = true; $('body').hidden = false; render(); }
+  catch (e) { if (!data) fail(/not allowed/.test(e.message) ? 'this link needs your owner key.' : `couldn't load: ${e.message}`); }
+}
+
+if (!KEY) fail('this link needs your owner key.');
+else {
+  $('canvasLink').href = `./#admin=${KEY}`;
+  $('q').addEventListener('input', rows);
+  $('csv').addEventListener('click', csv);
+  tick();
+  setInterval(() => { if (!document.hidden) tick(); }, 30000);
+}
+</script>
+</body>
+</html>

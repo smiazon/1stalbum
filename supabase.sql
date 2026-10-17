@@ -457,6 +457,51 @@ end $$;
 grant execute on function public.restore_mark(text, uuid) to anon, authenticated;
 grant execute on function public.export_all(text) to anon, authenticated;
 
+-- ---------- the owner's dashboard ----------
+-- visits per day (from when this was added; earlier visits only exist in the running total)
+create table if not exists private.visits_daily (day date primary key, visits bigint not null default 0);
+
+create or replace function public.hit() returns bigint
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare total bigint;
+begin
+  insert into private.counters (key, value) values ('visits', 1)
+  on conflict (key) do update set value = private.counters.value + 1
+  returning value into total;
+  insert into private.visits_daily (day, visits) values (private.today(), 1)
+  on conflict (day) do update set visits = private.visits_daily.visits + 1;
+  return total;
+end $$;
+
+-- everything the dashboard shows, in one call. Owner only.
+create or replace function public.owner_dashboard(p_key text) returns jsonb
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  return jsonb_build_object(
+    'now', now(),
+    'visits_total', coalesce((select value from private.counters where key = 'visits'), 0),
+    'visits_by_day', coalesce((select jsonb_agg(jsonb_build_object('day', day, 'visits', visits) order by day) from private.visits_daily), '[]'),
+    'here_now', (select count(*) from private.presence where seen > now() - interval '45 seconds'),
+    'signers', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'at', c.created_at,
+        'name', c.name,
+        'contact', c.contact,
+        'kind', case when c.drawing_id is not null then 'painting' when c.signature_id is not null then 'name' else '?' end,
+        'showing', coalesce((select not s.hidden from public.signatures s where s.id = c.signature_id), false)
+                or coalesce((select not d.hidden from public.drawings d where d.id = c.drawing_id), false),
+        'owner', c.owner
+      ) order by c.created_at desc)
+      from private.contacts c), '[]'),
+    'names_on_canvas', (select count(*) from public.signatures where not hidden),
+    'paintings_on_canvas', (select count(*) from public.drawings where not hidden),
+    'hidden', (select count(*) from public.signatures where hidden) + (select count(*) from public.drawings where hidden)
+  );
+end $$;
+
+grant execute on function public.owner_dashboard(text) to anon, authenticated;
+
 -- only these functions are open to the website; the helpers and private tables are not
 revoke all on schema private from public;
 revoke all on all functions in schema private from public;
