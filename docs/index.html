@@ -143,7 +143,8 @@
   @keyframes ink { from { opacity: 0; filter: blur(2px); } }
   .ghost { opacity: .45; }
   .hint { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; color: #b8b5ad; font-style: italic; font-size: 3.6cqw; }
-  body.admin .sig:not(.ghost) { pointer-events: auto; cursor: not-allowed; }
+  body.owner-remove .sig:not(.ghost) { pointer-events: auto; cursor: not-allowed; }
+  body.owner-remove .sleeve, body.owner-write .sleeve { cursor: pointer; }
 
   /* ---------- the tools: hyper simple ---------- */
   .tools {
@@ -183,7 +184,11 @@
   .fields .link:hover { text-decoration: underline; }
   .msg { font-size: 13px; font-style: italic; color: var(--grey); min-height: 18px; margin-top: 5px; }
   .tools[hidden] { display: none; }
-  body.admin .sizes, body.admin #undo, body.admin #clear, body.admin .inkrow, body.admin #contact { display: none; }
+  body.admin #contact { display: none; }
+  .modes { display: none; gap: 10px; font-size: 13px; margin-right: 4px; }
+  body.admin .modes { display: flex; }
+  .modes button { border: 0; background: none; padding: 0; cursor: pointer; color: var(--grey); font: inherit; }
+  .modes button.on { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
   /* painting: the square comes forward, everything else steps back */
   .shade { position: fixed; inset: 0; z-index: 5; pointer-events: none; opacity: 0; transition: opacity .35s ease;
@@ -315,6 +320,7 @@
         <div class="dots colors" id="colors" aria-label="colour"></div>
         <div class="dots sizes" id="sizes" aria-label="brush size"></div>
         <span class="grow"></span>
+        <div class="modes" id="modes" aria-label="owner mode"><button type="button" data-mode="paint" class="on">paint</button><button type="button" data-mode="write">write</button><button type="button" data-mode="remove">remove</button></div>
         <button type="button" class="tool" id="undo" title="undo" aria-label="undo" disabled>&#8630;</button>
         <button type="button" class="tool" id="clear" title="clear" aria-label="clear" disabled>&times;</button>
         <button type="button" class="tool link" id="done">done</button>
@@ -883,6 +889,7 @@ let cur = null;         // the stroke being painted right now
 let win = null;         // the signing window
 
 const ADMIN_KEY = (location.hash.match(/admin=([\w-]+)/) || [])[1];   // owner: #admin=<owner key>
+let ownerMode = 'paint';
 if (ADMIN_KEY) document.body.classList.add('admin');
 
 // picking a colour and a brush
@@ -963,7 +970,7 @@ $('shade').onclick = () => focusPaint(false);
 addEventListener('keydown', (e) => { if (e.key === 'Escape') focusPaint(false); });
 
 sleeve.addEventListener('pointerdown', (e) => {
-  if (ADMIN_KEY || $('signForm').hidden) return;
+  if (ADMIN_KEY ? ownerMode !== 'paint' : $('signForm').hidden) return;
   if (!document.body.classList.contains('painting')) { e.preventDefault(); focusPaint(true); return; }
   if (inkLeft() <= 0) { msg.textContent = 'out of paint. sign it, or undo.'; return; }
   cur = { c: pen.color, s: pen.size, p: toUnits(e) };
@@ -1061,9 +1068,27 @@ if (ADMIN_KEY) {
   });
   add('artwork (png)', () => downloadArtwork());
   $('contact').required = false;
-  $('hint').textContent = 'tap where our signature goes';
+  $('name').required = false;
+  // three modes: paint (unlimited paintings), write (our marker signature), remove (click a mark)
+  const hints = { paint: 'tap to paint', write: 'tap where our signature goes', remove: 'click a mark to remove it' };
+  [...$('modes').children].forEach((b) => b.onclick = () => {
+    ownerMode = b.dataset.mode;
+    [...$('modes').children].forEach((x) => x.classList.toggle('on', x === b));
+    document.body.classList.toggle('owner-write', ownerMode === 'write');
+    document.body.classList.toggle('owner-remove', ownerMode === 'remove');
+    if (ownerMode !== 'write') { pick.x = pick.y = null; drawGhost(); }
+    $('hint').textContent = hints[ownerMode];
+    msg.textContent = ownerMode === 'paint' ? 'unlimited. each one is saved under your email.' : '';
+  });
   sleeve.addEventListener('click', async (e) => {
+    if (ownerMode === 'paint') return;
     const id = e.target.dataset?.id;
+    if (ownerMode === 'write') {
+      const [x, y] = toUnits(e);
+      pick.x = clamp(x / 10, 1, 86); pick.y = clamp(y / 10, 4, 96);
+      drawGhost();
+      return;
+    }
     if (id && !e.target.classList.contains('ghost')) {
       const s = entries.find((x) => x.id === id);
       if (!confirm(`remove "${s?.name}"?`)) return;
@@ -1077,10 +1102,7 @@ if (ADMIN_KEY) {
       if (!confirm('remove this painting?')) return;
       try { await rpc('remove_drawing', { p_key: ADMIN_KEY, p_id: hit.id }); paintings = paintings.filter((d) => d !== hit); renderNames(); }
       catch (err) { msg.textContent = err.message; }
-      return;
     }
-    pick.x = clamp(x / 10, 1, 86); pick.y = clamp(y / 10, 4, 96);
-    drawGhost();
   });
   $('name').addEventListener('input', drawGhost);
 }
@@ -1130,7 +1152,14 @@ $('signForm').addEventListener('submit', async (e) => {
   const btn = e.target.querySelector('[type=submit]'); btn.disabled = true;
   try {
     if (!online()) throw new Error('the square opens soon.');
-    if (ADMIN_KEY) {                                   // our signature, in marker
+    if (ADMIN_KEY && ownerMode === 'paint') {          // ours: unlimited, saved under the owner's email
+      if (!mine.length) throw new Error('paint something first.');
+      msg.textContent = 'signing…';
+      const d = await rpc('artist_draw', { p_key: ADMIN_KEY, p_strokes: mine, p_name: $('name').value });
+      paintings.push(d); mine = [];
+      renderNames(); updateTools();
+      setTimeout(() => focusPaint(false), 900);
+    } else if (ADMIN_KEY) {                            // our signature, in marker
       if (pick.x == null) throw new Error('tap where it goes first.');
       msg.textContent = 'signing…';
       const s = await rpc('artist_sign', { p_key: ADMIN_KEY, p_name: $('name').value, p_color: pen.color, p_x: pick.x, p_y: pick.y });

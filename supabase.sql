@@ -318,6 +318,47 @@ begin
                from private.contacts c order by c.created_at;
 end $$;
 
+-- ---------- the owner: unlimited, and counted ----------
+-- With the owner key, the artist can sign and paint as often as they like. Every one is recorded
+-- under the owner's email, so it counts in the totals and the signer list like anyone else's.
+alter table private.settings add column if not exists owner_email text not null default 'smiazon@gmail.com';
+alter table private.contacts add column if not exists owner boolean not null default false;
+drop index if exists private.contacts_once_a_day;
+create unique index if not exists contacts_once_a_day on private.contacts (contact, day) where not owner;
+
+create or replace function public.artist_draw(p_key text, p_strokes jsonb, p_name text default null)
+returns public.drawings language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare cs record; r public.drawings; n text := left(btrim(coalesce(p_name, '')), 32);
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  select * into cs from private.clean_strokes(p_strokes);
+  if cs.ink > 61800 then raise exception 'out of ink'; end if;        -- one painting's worth each time, as many times as you like
+  insert into public.drawings (strokes) values (cs.strokes) returning * into r;
+  insert into private.contacts (drawing_id, name, contact, day, owner)
+  values (r.id, coalesce(nullif(n, ''), 'us'), (select owner_email from private.settings), private.today(), true);
+  return r;
+end $$;
+
+-- our written signature, now recorded too
+create or replace function public.artist_sign(p_key text, p_name text, p_color text default null, p_x real default null, p_y real default null)
+returns public.signatures language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare r public.signatures; n text := left(btrim(coalesce(p_name, '')), 32);
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  if n = '' then raise exception 'add your name'; end if;
+  insert into public.signatures (name, color, font, x, y, rot, size, artist)
+  values (n,
+    case when p_color ~ '^#[0-9a-fA-F]{6}$' then p_color else '#1b1b1b' end,
+    'Rock Salt', greatest(1, least(86, coalesce(p_x, 30))), greatest(4, least(96, coalesce(p_y, 80))),
+    round((random() - 0.5) * 12)::int, 32, true)
+  returning * into r;
+  insert into private.contacts (signature_id, name, contact, day, owner)
+  values (r.id, n, (select owner_email from private.settings), private.today(), true);
+  return r;
+end $$;
+
+grant execute on function public.artist_draw(text, jsonb, text) to anon, authenticated;
+
 -- only these functions are open to the website; the helpers and private tables are not
 revoke all on schema private from public;
 revoke all on all functions in schema private from public;
