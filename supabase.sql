@@ -124,21 +124,22 @@ declare
   d date := private.today();
   ip text := private.client_ip();
   ih text := case when ip is null then null else encode(digest(ip, 'sha256'), 'hex') end;
+  me boolean := c is not null and c = (select owner_email from private.settings);   -- the owner's email: no limits
   r public.signatures;
 begin
   if n = '' then raise exception 'add your name'; end if;
   if private.is_blocked(n) then raise exception 'let''s keep it kind. try another name.'; end if;
   if c is null then raise exception 'enter a valid email or phone number'; end if;
-  if now() >= (select closes_at from private.settings) then raise exception 'signing is closed. now we sign it.'; end if;
+  if not me and now() >= (select closes_at from private.settings) then raise exception 'signing is closed. now we sign it.'; end if;
   if (select count(*) from public.signatures) >= 2000 then raise exception 'there''s no room left'; end if;
-  if exists (select 1 from private.contacts where contact = c and day = d) then
+  if not me and exists (select 1 from private.contacts where contact = c and day = d) then
     raise exception 'you already signed today. come back tomorrow.';
   end if;
   if ih is not null then
     if exists (select 1 from private.contacts where ip_hash = ih and created_at > now() - interval '5 seconds') then
       raise exception 'slow down';
     end if;
-    if (select count(*) from private.contacts where ip_hash = ih and day = d) >= 3 then
+    if not me and (select count(*) from private.contacts where ip_hash = ih and day = d) >= 3 then
       raise exception 'you already signed today. come back tomorrow.';
     end if;
   end if;
@@ -154,7 +155,7 @@ begin
     18 + floor(random() * 14)::int
   ) returning * into r;
 
-  insert into private.contacts (signature_id, name, contact, ip_hash, day) values (r.id, n, c, ih, d);
+  insert into private.contacts (signature_id, name, contact, ip_hash, day, owner) values (r.id, n, c, ih, d, me);
   return r;
 exception when unique_violation then
   raise exception 'you already signed today. come back tomorrow.';
@@ -273,28 +274,29 @@ declare
   ip text := private.client_ip();
   ih text := case when ip is null then null else encode(digest(ip, 'sha256'), 'hex') end;
   cs record;
+  me boolean := c is not null and c = (select owner_email from private.settings);   -- the owner's email: no limits
   r public.drawings;
 begin
   if n = '' then raise exception 'add your name'; end if;
   if private.is_blocked(n) then raise exception 'let''s keep it kind. try another name.'; end if;
   if c is null then raise exception 'enter a valid email or phone number'; end if;
-  if now() >= (select closes_at from private.settings) then raise exception 'signing is closed. now we sign it.'; end if;
+  if not me and now() >= (select closes_at from private.settings) then raise exception 'signing is closed. now we sign it.'; end if;
   if (select count(*) from public.drawings) >= 1200 then raise exception 'there''s no room left'; end if;
   select * into cs from private.clean_strokes(p_strokes);
   if cs.ink > 61800 then raise exception 'out of ink'; end if;
-  if exists (select 1 from private.contacts where contact = c and day = d) then
+  if not me and exists (select 1 from private.contacts where contact = c and day = d) then
     raise exception 'you already signed today. come back tomorrow.';
   end if;
   if ih is not null then
     if exists (select 1 from private.contacts where ip_hash = ih and created_at > now() - interval '5 seconds') then
       raise exception 'slow down';
     end if;
-    if (select count(*) from private.contacts where ip_hash = ih and day = d) >= 3 then
+    if not me and (select count(*) from private.contacts where ip_hash = ih and day = d) >= 3 then
       raise exception 'you already signed today. come back tomorrow.';
     end if;
   end if;
   insert into public.drawings (strokes) values (cs.strokes) returning * into r;
-  insert into private.contacts (drawing_id, name, contact, ip_hash, day) values (r.id, n, c, ih, d);
+  insert into private.contacts (drawing_id, name, contact, ip_hash, day, owner) values (r.id, n, c, ih, d, me);
   return r;
 exception when unique_violation then
   raise exception 'you already signed today. come back tomorrow.';
