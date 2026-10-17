@@ -359,6 +359,104 @@ end $$;
 
 grant execute on function public.artist_draw(text, jsonb, text) to anon, authenticated;
 
+-- ---------- never erase ----------
+-- Nothing on the canvas is ever deleted. "Remove" only hides a mark (restorable), and the database
+-- refuses any delete or wipe of the canvas and the signer list, even one typed into the SQL editor.
+alter table public.signatures add column if not exists hidden boolean not null default false;
+alter table public.drawings add column if not exists hidden boolean not null default false;
+drop policy if exists "anyone can read signatures" on public.signatures;
+create policy "anyone can read signatures" on public.signatures for select using (not hidden);
+drop policy if exists "anyone can see drawings" on public.drawings;
+create policy "anyone can see drawings" on public.drawings for select using (not hidden);
+
+create or replace function private.never_erase() returns trigger language plpgsql as $$
+begin
+  raise exception 'the canvas is never erased. use remove in owner mode to hide a mark instead.';
+end $$;
+drop trigger if exists never_erase on public.signatures;
+create trigger never_erase before delete on public.signatures for each row execute function private.never_erase();
+drop trigger if exists never_wipe on public.signatures;
+create trigger never_wipe before truncate on public.signatures for each statement execute function private.never_erase();
+drop trigger if exists never_erase on public.drawings;
+create trigger never_erase before delete on public.drawings for each row execute function private.never_erase();
+drop trigger if exists never_wipe on public.drawings;
+create trigger never_wipe before truncate on public.drawings for each statement execute function private.never_erase();
+drop trigger if exists never_erase on private.contacts;
+create trigger never_erase before delete on private.contacts for each row execute function private.never_erase();
+drop trigger if exists never_wipe on private.contacts;
+create trigger never_wipe before truncate on private.contacts for each statement execute function private.never_erase();
+
+create or replace function public.remove_signature(p_key text, p_id uuid) returns boolean
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  update public.signatures set hidden = true where id = p_id and not hidden;
+  return found;
+end $$;
+
+create or replace function public.remove_drawing(p_key text, p_id uuid) returns boolean
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  update public.drawings set hidden = true where id = p_id and not hidden;
+  return found;
+end $$;
+
+-- bring a hidden mark back
+create or replace function public.restore_mark(p_key text, p_id uuid) returns boolean
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare n int;
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  update public.signatures set hidden = false where id = p_id and hidden;
+  get diagnostics n = row_count;
+  update public.drawings set hidden = false where id = p_id and hidden;
+  return n > 0 or found;
+end $$;
+
+create or replace function public.signers(p_key text)
+returns table (signed_at timestamptz, name text, contact text, still_on_page boolean)
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  return query
+    select c.created_at, c.name, c.contact,
+           coalesce((select not s.hidden from public.signatures s where s.id = c.signature_id), false)
+        or coalesce((select not d.hidden from public.drawings d where d.id = c.drawing_id), false)
+    from private.contacts c order by c.created_at;
+end $$;
+
+-- ---------- backups ----------
+-- everything: the canvas (hidden marks included) and the signer list
+create or replace function private.everything() returns jsonb language sql stable as $$
+  select jsonb_build_object(
+    'taken_at', now(),
+    'signatures', coalesce((select jsonb_agg(to_jsonb(s) order by s.created_at) from public.signatures s), '[]'),
+    'drawings',   coalesce((select jsonb_agg(to_jsonb(d) order by d.created_at) from public.drawings d), '[]'),
+    'contacts',   coalesce((select jsonb_agg(to_jsonb(c) - 'ip_hash' order by c.created_at) from private.contacts c), '[]')
+  )
+$$;
+
+-- a full copy, for the owner's own backups
+create or replace function public.export_all(p_key text) returns jsonb
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  if not private.is_admin(p_key) then raise exception 'not allowed'; end if;
+  return private.everything();
+end $$;
+
+-- nightly snapshots inside the database, kept 90 days
+create table if not exists private.snapshots (taken_at timestamptz primary key default now(), data jsonb not null);
+create or replace function private.take_snapshot() returns void
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  insert into private.snapshots (data) values (private.everything()) on conflict do nothing;
+  delete from private.snapshots where taken_at < now() - interval '90 days';
+end $$;
+
+grant execute on function public.restore_mark(text, uuid) to anon, authenticated;
+grant execute on function public.export_all(text) to anon, authenticated;
+
 -- only these functions are open to the website; the helpers and private tables are not
 revoke all on schema private from public;
 revoke all on all functions in schema private from public;
@@ -376,3 +474,8 @@ revoke insert, update, delete on public.signatures from anon, authenticated;
 revoke insert, update, delete on public.drawings from anon, authenticated;
 
 -- Your owner key (keep it secret): run   select admin_key from private.settings;
+
+-- ---------- Supabase only: run the nightly snapshot at 3:17 am Eastern (07:17 UTC) ----------
+create extension if not exists pg_cron;
+select cron.schedule('1stalbum-nightly-backup', '17 7 * * *', 'select private.take_snapshot()');
+select private.take_snapshot();

@@ -320,7 +320,7 @@
         <div class="dots colors" id="colors" aria-label="colour"></div>
         <div class="dots sizes" id="sizes" aria-label="brush size"></div>
         <span class="grow"></span>
-        <div class="modes" id="modes" aria-label="owner mode"><button type="button" data-mode="paint" class="on">paint</button><button type="button" data-mode="write">write</button><button type="button" data-mode="remove">remove</button></div>
+        <div class="modes" id="modes" aria-label="owner mode"><button type="button" data-mode="paint" class="on">paint</button><button type="button" data-mode="write">write</button><button type="button" data-mode="remove">hide</button></div>
         <button type="button" class="tool" id="undo" title="undo" aria-label="undo" disabled>&#8630;</button>
         <button type="button" class="tool" id="clear" title="clear" aria-label="clear" disabled>&times;</button>
         <button type="button" class="tool link" id="done">done</button>
@@ -1070,7 +1070,7 @@ if (ADMIN_KEY) {
   $('contact').required = false;
   $('name').required = false;
   // three modes: paint (unlimited paintings), write (our marker signature), remove (click a mark)
-  const hints = { paint: 'tap to paint', write: 'tap where our signature goes', remove: 'click a mark to remove it' };
+  const hints = { paint: 'tap to paint', write: 'tap where our signature goes', remove: 'click a mark to hide it. nothing is ever deleted.' };
   [...$('modes').children].forEach((b) => b.onclick = () => {
     ownerMode = b.dataset.mode;
     [...$('modes').children].forEach((x) => x.classList.toggle('on', x === b));
@@ -1091,7 +1091,7 @@ if (ADMIN_KEY) {
     }
     if (id && !e.target.classList.contains('ghost')) {
       const s = entries.find((x) => x.id === id);
-      if (!confirm(`remove "${s?.name}"?`)) return;
+      if (!confirm(`hide "${s?.name}"? it's kept, and can be brought back.`)) return;
       try { await rpc('remove_signature', { p_key: ADMIN_KEY, p_id: id }); entries = entries.filter((x) => x.id !== id); renderNames(); }
       catch (err) { msg.textContent = err.message; }
       return;
@@ -1099,7 +1099,7 @@ if (ADMIN_KEY) {
     const [x, y] = toUnits(e);
     const hit = paintingAt(x, y);
     if (hit) {
-      if (!confirm('remove this painting?')) return;
+      if (!confirm("hide this painting? it's kept, and can be brought back.")) return;
       try { await rpc('remove_drawing', { p_key: ADMIN_KEY, p_id: hit.id }); paintings = paintings.filter((d) => d !== hit); renderNames(); }
       catch (err) { msg.textContent = err.message; }
     }

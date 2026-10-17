@@ -54,3 +54,17 @@ Open `https://smiazon.github.io/1stalbum/#admin=<owner key>`:
 ```
 npm start            # http://localhost:3000
 ```
+
+## Nothing is ever erased, and there are backups
+
+- **Hide, never delete.** In owner mode, "hide" only hides a mark from the page; it stays in the database. The database
+  refuses any delete or wipe of the canvas and the signer list (even typed into the SQL editor).
+- **Bring a mark back:** in the SQL editor, `update public.drawings set hidden = false where id = '<id>';`
+  (or `public.signatures`), or call `restore_mark(<owner key>, <id>)`. To see hidden ones:
+  `select id, created_at from public.drawings where hidden;`
+- **Nightly snapshots in the database** at 3:17 am Eastern, kept 90 days (`private.snapshots`), with the canvas,
+  hidden marks and the signer list. To see them: `select taken_at from private.snapshots order by taken_at desc;`
+- **Daily copies on the Mac** at 3:23 am (and at login) in `~/1stalbum backups` (also linked as Documents → 1stalbum backups),
+  by `tools/backup.sh` via `~/Library/LaunchAgents/com.smiazon.1stalbum-backup.plist`. To include hidden marks and the
+  signer list, save the owner key in `~/.1stalbum-owner-key`. Run one by hand: `bash tools/backup.sh`.
+  To stop it: `launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.smiazon.1stalbum-backup.plist`.
