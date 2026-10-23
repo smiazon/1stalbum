@@ -624,7 +624,6 @@ const say = (text, hold = 4000) => { msg.textContent = text; clearTimeout(say.t)
 // picking a song from the list: the row blinks twice, then the lights go down
 function choose(li, i) {
   if (li.classList.contains('flash')) return;
-  audioCtx()?.resume?.();                                  // sound is allowed now, while the click is fresh
   play(i, 330);
   let n = 0;
   const blink = () => { li.classList.toggle('flash'); if (++n < 4) setTimeout(blink, 75); else setTimeout(() => li.classList.remove('flash'), 120); };
@@ -641,6 +640,7 @@ function play(i, wait = 0) {
   }
   if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;   // a new song, or this one again after it ended
   playingIdx = i;
+  hear(s.src);
   $('pTitle').textContent = songName(i);
   go();
   audio.play();
@@ -665,23 +665,62 @@ function audioCtx() {
   if (!sharedCtx && AC) sharedCtx = new AC();
   return sharedCtx;
 }
-const viz = { look: null, on: false, an: null, freq: null, wave: null, raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
+const viz = { look: null, on: false, an: null, freq: new Uint8Array(512), raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
 const out = $('viz'), ox = out.getContext('2d');                       // what you see: the scene plus effects
 const vc = document.createElement('canvas'), vx = vc.getContext('2d');   // the scene, which spirals into itself
 const tiny = document.createElement('canvas'), sx = tiny.getContext('2d');   // for the bloom
 const buf = document.createElement('canvas'), bx = buf.getContext('2d');
 
-function analyse() {
-  if (viz.an) return;
-  const c = audioCtx();
-  if (!c) return;
-  try {
-    const src = c.createMediaElementSource(audio);
-    viz.an = c.createAnalyser(); viz.an.fftSize = 1024; viz.an.smoothingTimeConstant = .8;
-    viz.freq = new Uint8Array(viz.an.frequencyBinCount);
-    viz.wave = new Uint8Array(viz.an.fftSize);
-    src.connect(viz.an); viz.an.connect(c.destination);
-  } catch { viz.an = null; }
+// How the visuals hear the song, without touching it: the song plays as a plain audio file
+// (nothing in between, so it can't stutter or change pitch), and the page reads the same file
+// once, on its own, into a spectrum for every 30th of a second. The visuals look up the moment
+// that's playing. Each analyser bin is ~43 Hz, the same as before.
+const SPECTRA = {};
+function spectrumOf(src) {
+  return SPECTRA[src] ||= (async () => {
+    const data = await (await fetch(src)).arrayBuffer();
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    let ac;
+    try { ac = new OAC(1, 1, 22050); } catch { ac = new OAC(1, 1, 44100); }
+    const sound = await new Promise((ok, no) => { const r = ac.decodeAudioData(data, ok, no); if (r && r.then) r.then(ok, no); });
+    const rate = sound.sampleRate, N = rate > 30000 ? 1024 : 512, hop = Math.round(rate / 30);
+    const L = sound.getChannelData(0), R = sound.numberOfChannels > 1 ? sound.getChannelData(1) : L;
+    const n = Math.max(0, Math.floor((L.length - N) / hop)), frames = new Uint8Array(n * 256);
+    const win = Float32Array.from({ length: N }, (_, i) => .42 - .5 * Math.cos(2 * Math.PI * i / N) + .08 * Math.cos(4 * Math.PI * i / N));
+    const bits = Math.log2(N), rev = new Uint16Array(N);
+    for (let i = 0; i < N; i++) { let r = 0; for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b); rev[i] = r; }
+    const cos = Float32Array.from({ length: N / 2 }, (_, i) => Math.cos(-2 * Math.PI * i / N)), sin = Float32Array.from({ length: N / 2 }, (_, i) => Math.sin(-2 * Math.PI * i / N));
+    const re = new Float32Array(N), im = new Float32Array(N), smooth = new Float32Array(256);
+    for (let f = 0; f < n; f++) {
+      const o = f * hop;
+      for (let i = 0; i < N; i++) { re[rev[i]] = (L[o + i] + R[o + i]) * .5 * win[i]; im[rev[i]] = 0; }
+      for (let size = 2; size <= N; size <<= 1) {               // a plain radix-2 FFT
+        const half = size >> 1, step = N / size;
+        for (let st = 0; st < N; st += size) for (let j = 0; j < half; j++) {
+          const a = st + j, b = a + half, c = cos[j * step], d = sin[j * step];
+          const tr = re[b] * c - im[b] * d, ti = re[b] * d + im[b] * c;
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        }
+      }
+      for (let k = 0; k < 256; k++) {                            // like an AnalyserNode: smoothed, then -100..-30 dB to 0..255
+        smooth[k] = smooth[k] * .7 + Math.hypot(re[k], im[k]) / N * .3;
+        frames[f * 256 + k] = clamp((20 * Math.log10(smooth[k] + 1e-12) + 97.8) / 70 * 255, 0, 255);   // matched to the real analyser
+      }
+      if (f % 400 === 399) await new Promise((r) => setTimeout(r, 0));   // let the page breathe
+    }
+    return { fps: rate / hop, n, frames };
+  })().catch(() => { delete SPECTRA[src]; return null; });
+}
+// a new song: the visuals breathe on their own until its spectrum is ready, about a second
+function hear(src) {
+  viz.an = null;
+  spectrumOf(src).then((sp) => { if (sp && audio.src.endsWith(src)) { viz.spec = sp; viz.an = true; } });
+}
+function readSpectrum() {
+  const sp = viz.spec, pos = audio.currentTime * sp.fps, i = Math.floor(pos), f = pos - i;
+  if (i < 0 || i >= sp.n - 1) { viz.freq.fill(0); return; }
+  const a = i * 256, b = a + 256, F = sp.frames;
+  for (let k = 0; k < 256; k++) viz.freq[k] = F[a + k] + (F[b + k] - F[a + k]) * f;
 }
 function sizeViz() {
   const dpr = Math.min(devicePixelRatio || 1, innerWidth < 760 ? 1.25 : 1.5);
@@ -695,9 +734,6 @@ function listen(on) {
   viz.on = on;
   document.body.classList.toggle('listening', on);
   if (on) {
-    // only route the song through the visuals once sound is actually allowed, so it can never go silent
-    const c = audioCtx();
-    if (c) Promise.resolve(c.resume?.()).then(() => { if (c.state === 'running') analyse(); }).catch(() => {});
     sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height);
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
     wake();
@@ -730,7 +766,7 @@ const band = (a, b) => { let v = 0; for (let i = a; i < b; i++) v += viz.freq[i]
 function levels(t) {
   let bass = 0, mid = 0, high = 0;
   if (viz.an && !audio.paused) {
-    viz.an.getByteFrequencyData(viz.freq);
+    readSpectrum();
     bass = band(1, 8); mid = band(8, 64); high = band(64, 220);
   } else {                                                 // before the sound arrives: a slow breath
     bass = .25 + Math.sin(t * 1.3) * .08; mid = .2; high = .15;
