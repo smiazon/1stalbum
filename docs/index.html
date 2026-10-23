@@ -156,7 +156,14 @@
   .list li .d { font-size: 12px; }
   .list li.out { color: #000; cursor: pointer; }
   .list li.out img { opacity: 1; }
-  .list li.out:hover .t { text-decoration: underline; text-underline-offset: 3px; }
+  /* a released song: grey under the pointer, black while pressed, and it blinks when chosen (like a 1984 menu) */
+  .list li .go { display: none; font-size: 12px; }
+  .list li.out:hover { background: #e2e2e2; }
+  .list li.out:hover .d { display: none; }
+  .list li.out:hover .go { display: inline; }
+  .list li.out:active, .list li.out.flash { background: #000; color: #fff; }
+  .list li.out:active img, .list li.out.flash img { filter: invert(1); }
+  @media (hover: none) { .list li.out:hover { background: none; } .list li.out:hover .d { display: inline; } .list li.out:hover .go { display: none; } }
   .list li.now { color: #000; }
   .list li.now .t { font-variant-numeric: tabular-nums; }
   .list li.playing { background: #000; color: #fff; }
@@ -586,15 +593,17 @@ function drawTracklist(out) {
     if (i < out) {
       li.className = 'out'; t.textContent = `${n}  ${songName(i)}`;
       li.tabIndex = 0; li.setAttribute('role', 'button'); li.title = `play ${songName(i)}`;
-      li.onclick = () => play(i);
-      li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); play(i); } };
+      li.onclick = () => choose(li, i);
+      li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(li, i); } };
     } else if (i === out) {
       li.className = 'now'; t.textContent = `${n}  `; const o = document.createElement('span'); o.id = 'outIn'; t.append(o);
     } else {
       t.textContent = n;
     }
     if (i === playingIdx && !audio.ended) li.classList.add('playing');
-    li.append(ic, t, d); list.append(li);
+    li.append(ic, t, d);
+    if (i < out) { const go = document.createElement('span'); go.className = 'go'; go.textContent = 'play \u25B6'; li.append(go); }
+    list.append(li);
   });
 }
 
@@ -612,18 +621,28 @@ const clock = (sec) => isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.fl
 const audio = $('audio');
 let playingIdx = -1;
 const say = (text, hold = 4000) => { msg.textContent = text; clearTimeout(say.t); if (hold) say.t = setTimeout(() => { if (msg.textContent === text) msg.textContent = ''; }, hold); };
-function play(i) {
+// picking a song from the list: the row blinks twice, then the lights go down
+function choose(li, i) {
+  if (li.classList.contains('flash')) return;
+  audioCtx()?.resume?.();                                  // sound is allowed now, while the click is fresh
+  play(i, 330);
+  let n = 0;
+  const blink = () => { li.classList.toggle('flash'); if (++n < 4) setTimeout(blink, 75); else setTimeout(() => li.classList.remove('flash'), 120); };
+  blink();
+}
+function play(i, wait = 0) {
   const s = SONGS[i];
+  const go = () => (wait ? setTimeout(() => listen(true), wait) : listen(true));
   if (!s.src) { $('pTitle').textContent = 'almost up. refresh in a minute.'; return; }
   if (playingIdx === i && audio.src && !audio.ended) {     // already playing: just go back in, right where it is
-    listen(true);
+    go();
     if (audio.paused) audio.play().catch(() => {});
     return;
   }
   if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;   // a new song, or this one again after it ended
   playingIdx = i;
   $('pTitle').textContent = songName(i);
-  listen(true);
+  go();
   audio.play();
   [...$('tracklist').children].forEach((li, j) => li.classList.toggle('playing', j === i));
   $('pPlay').classList.add('on');
@@ -1012,20 +1031,114 @@ const mixRGB = (a, b, f) => a.map((v, i) => Math.round(lerp(v, b[i], f)));
 const css = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const sim = { W: 0, H: 0, travel: 0, kicks: 0, kicked: false };
 
-// the memories: tiny one-bit pictures, dithered like MacPaint
+// the memories: little pictures, drawn smoothly at 72×46 and then dithered to one bit, like MacPaint.
+// Each draws in shades of grey (0 black, 1 white); the dithering does the rest.
+const MW = 72, MH = 46;
+const seeded = (n) => () => ((n = (n * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+const grey = (g, v) => { const c = Math.round(clamp(v, 0, 1) * 255); g.fillStyle = g.strokeStyle = `rgb(${c},${c},${c})`; };
+const vgrad = (g, stops) => { const gr = g.createLinearGradient(0, 0, 0, MH); stops.forEach(([o, v]) => gr.addColorStop(o, `rgb(${v * 255 | 0},${v * 255 | 0},${v * 255 | 0})`)); g.fillStyle = gr; g.fillRect(0, 0, MW, MH); };
+const stars = (g, n, seed, maxY = MH) => { const r = seeded(seed); grey(g, 1); for (let i = 0; i < n; i++) g.fillRect(Math.floor(r() * MW), Math.floor(r() * maxY), 1, 1); };
+const line = (g, w, ...pts) => { g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke(); };
+const disc = (g, x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+
+// an italian greyhound, side on: deep chest, tucked waist, long thin legs, a whip of a tail
+function greyhound(g, run) {
+  g.save();
+  if (run) { g.translate(2, 2); }
+  grey(g, .04);
+  g.beginPath();
+  g.moveTo(22, 17);
+  g.bezierCurveTo(30, run ? 15 : 14, 40, run ? 16 : 15, 46, 16);
+  g.lineTo(50, run ? 13.5 : 12); g.lineTo(53, run ? 11 : 8.5);
+  g.quadraticCurveTo(56, run ? 10.5 : 7.5, 58, run ? 12 : 9); g.lineTo(63, run ? 15 : 11.5); g.lineTo(62.4, run ? 16.4 : 13);
+  g.lineTo(56, run ? 16 : 13.2); g.quadraticCurveTo(52, 15, 50, 18);
+  g.quadraticCurveTo(48, 22, 47, 27); g.quadraticCurveTo(44, 29.5, 40, 27.5);
+  g.quadraticCurveTo(34, 22, 29, 22.5); g.quadraticCurveTo(24, 24, 21, 24); g.quadraticCurveTo(19, 21, 22, 17);
+  g.fill();
+  g.beginPath(); g.moveTo(53, run ? 11.5 : 9); g.lineTo(50.2, run ? 10.5 : 7.4); g.lineTo(52, run ? 13 : 11); g.fill();   // the folded ear
+  if (run) {                                                     // the gallop: everything stretched out
+    line(g, 1.7, [46, 26], [53, 31], [60, 33]); line(g, 1.7, [43, 27], [50, 33], [57, 36]);
+    line(g, 1.7, [23, 22], [15, 26], [7, 27]); line(g, 1.7, [21, 22], [14, 29], [6, 31]);
+    line(g, 1.2, [21, 18.5], [13, 15], [6, 16]);
+  } else {
+    line(g, 1.7, [45.5, 26], [46.5, 33], [46, 40], [48, 40]); line(g, 1.7, [42.5, 27], [43, 33], [41.5, 40], [43.5, 40]);
+    line(g, 1.7, [23.5, 22], [26.5, 30], [23.5, 35], [24.5, 40], [26.5, 40]); line(g, 1.7, [21, 22], [23, 30], [19.5, 35], [20.5, 40], [22.5, 40]);
+    line(g, 1.2, [21, 18.5], [14.5, 22], [15, 30], [17.5, 34]);
+  }
+  grey(g, .9); disc(g, run ? 57.5 : 57.6, run ? 12.6 : 9.8, .7);   // the eye catching light
+  g.restore();
+}
 const MEMORIES = [
-  (u, v) => v < .55 ? (Math.hypot(u - .5, v - .5) < .2 ? 1 : .15 + v * .6) : (Math.sin(v * 60 + u * 4) > .2 ? .55 : .1),   // sun over the sea
-  (u, v) => Math.hypot(u - .7, v - .3) < .14 && Math.hypot(u - .76, v - .25) > .12 ? 1 : ((u * 97 + v * 61) % 1 < .012 ? 1 : .04),   // the moon
-  (u, v) => v > .8 ? .35 : (u > .3 && u < .7 && v > .5) ? ((u > .45 && u < .55 && v > .62 && v < .74) ? 1 : .7) : (v > .5 - (.2 - Math.abs(u - .5)) && v < .5 && Math.abs(u - .5) < .24 ? .2 : .08 + v * .2),   // a house, a lit window
-  (u, v) => v > .62 + Math.sin(u * 9) * .08 ? .1 : v > .45 + Math.sin(u * 5 + 1) * .12 ? .45 : .15 + (1 - v) * .5,   // mountains
-  (u, v) => (Math.hypot(u - .5, (v - .38) * 1.2) < .25 ? .3 : (Math.abs(u - .5) < .05 && v > .5 && v < .85) ? .2 : v > .85 ? .5 : .85),   // a tree
-  (u, v) => v < .45 ? .2 + v : (Math.abs(u - .5) < (v - .45) * .9 ? (Math.abs(u - .5) < .02 && (v * 30) % 2 < 1 ? 1 : .3) : .1),   // an empty road
+  (g) => { vgrad(g, [[0, .92], [.8, .55], [1, .5]]); grey(g, .3); g.fillRect(0, 40, MW, 6); greyhound(g, false); },            // the greyhound, standing
+  (g) => { vgrad(g, [[0, .75], [1, .95]]); grey(g, .55); g.fillRect(0, 41, MW, 5); greyhound(g, true); },                        // the greyhound, flying
+  (g) => { vgrad(g, [[0, .02], [1, .08]]); stars(g, 60, 7);                                                                        // a ringed planet
+           const gr = g.createRadialGradient(30, 19, 2, 36, 24, 15); gr.addColorStop(0, '#fff'); gr.addColorStop(1, '#222'); g.fillStyle = gr; disc(g, 36, 24, 13);
+           g.save(); g.translate(36, 24); g.rotate(-.35); g.scale(1, .28); grey(g, .85); g.lineWidth = 3.2; g.beginPath(); g.arc(0, 0, 24, .15, Math.PI - .15); g.stroke(); g.restore(); },
+  (g) => { vgrad(g, [[0, .02], [1, .04]]); stars(g, 40, 3);                                                                        // a spiral galaxy
+           const r = seeded(11);
+           for (let i = 0; i < 900; i++) { const arm = i % 2, t = r() * 3.2, a = t * 1.9 + arm * Math.PI, d = 2 + t * 6.5, sp = (r() - .5) * (1 + t * .9);
+             grey(g, .35 + (1 - t / 3.2) * .65 * r()); g.fillRect(36 + Math.cos(a) * d * 1.5 + sp, 23 + Math.sin(a) * d * .8 + sp * .6, 1, 1); }
+           const gr = g.createRadialGradient(36, 23, 0, 36, 23, 6); gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; disc(g, 36, 23, 6); },
+  (g) => { vgrad(g, [[0, .02], [.45, .1], [.62, .75], [.8, .95], [1, .9]]);                                                        // a concert: lit stage, dark crowd
+           [[10, .5], [36, .7], [62, .5]].forEach(([x, v]) => { const gr = g.createLinearGradient(0, 0, 0, 28); gr.addColorStop(0, `rgba(255,255,255,${v})`); gr.addColorStop(1, 'rgba(255,255,255,.15)');
+             g.fillStyle = gr; g.beginPath(); g.moveTo(x - 1, 0); g.lineTo(x + 1, 0); g.lineTo(36 + (x - 36) * .3 + 8, 28); g.lineTo(36 + (x - 36) * .3 - 8, 28); g.fill(); });
+           grey(g, 0); disc(g, 36, 11, 2.6); g.fillRect(33.6, 13.4, 4.8, 9.5);                                                    // the singer
+           line(g, 1.4, [34, 15], [30, 8.5]); line(g, 1.2, [38.2, 16], [41, 13]); line(g, .9, [41.6, 12.6], [42.4, 29]);           // a hand up, the mic stand
+           g.fillRect(34, 22.5, 1.7, 6.5); g.fillRect(36.3, 22.5, 1.7, 6.5); g.fillRect(20, 28.6, 32, 1.4);                           // legs, the stage edge
+           const r = seeded(5); g.fillRect(0, 40, MW, 6);
+           for (let x = 1; x < MW; x += 3.2) { const h = 37 + r() * 2.5; disc(g, x, h, 2); g.fillRect(x - 2, h, 4, 6);
+             if (r() < .4) line(g, 1, [x + .8, h], [x + 1.5 + r() * 2.5, h - 7 - r() * 3]); } },                                    // the crowd, hands up
+  (g) => { vgrad(g, [[0, .9], [.72, .8], [.73, .38], [1, .3]]);                                                                    // a gallery
+           [[6, 9, 18, 14, 0], [29, 6, 15, 20, 1], [50, 10, 16, 12, 2]].forEach(([x, y, w, h, k]) => {
+             grey(g, .08); g.fillRect(x - 1.2, y - 1.2, w + 2.4, h + 2.4); grey(g, .97); g.fillRect(x, y, w, h);
+             if (k === 0) { grey(g, .4); g.beginPath(); g.moveTo(x, y + h); g.lineTo(x + 6, y + 6); g.lineTo(x + 11, y + 10); g.lineTo(x + w, y + 4); g.lineTo(x + w, y + h); g.fill(); }
+             if (k === 1) { grey(g, .15); disc(g, x + w / 2, y + h * .45, 4.5); grey(g, .6); g.fillRect(x + 2, y + h - 5, w - 4, 2); }
+             if (k === 2) { grey(g, .25); for (let i = 0; i < 4; i++) g.fillRect(x + 2 + i * 3.5, y + 2 + (i % 2) * 3, 2.2, h - 4 - (i % 2) * 3); } });
+           grey(g, .05); g.fillRect(25, 37, 22, 2.2); g.fillRect(27, 39, 1.6, 4); g.fillRect(43.5, 39, 1.6, 4);                   // a bench
+           disc(g, 60, 27, 2); g.fillRect(58.4, 29, 3.4, 9); g.fillRect(58.6, 38, 1.3, 6); g.fillRect(60.4, 38, 1.3, 6); },        // someone looking
+  (g) => { vgrad(g, [[0, .92], [1, .7]]);                                                                                         // a guitar, on a light wall
+           g.save(); g.translate(28, 28); g.rotate(-.55);
+           grey(g, .05); g.fillRect(9, -1.8, 35, 3.6); g.fillRect(42, -3, 8, 6);                                                  // the neck, the head
+           grey(g, .75); for (let x = 12; x < 42; x += 3.4) g.fillRect(x, -1.8, .7, 3.6);
+           grey(g, .0); disc(g, -2, 0, 12); disc(g, 8, 0, 9.4);                                                                   // the body's edge
+           grey(g, .55); disc(g, -2, 0, 10.6); disc(g, 8, 0, 8);                                                                  // the wood
+           grey(g, .0); disc(g, 5, 0, 3.4); g.fillRect(-9, -3.4, 2.2, 6.8);                                                       // the hole, the bridge
+           grey(g, .95); for (let k = -1.2; k <= 1.2; k += .8) g.fillRect(-8, k, 51, .35);                                         // the strings
+           g.restore(); },
+  (g) => { vgrad(g, [[0, .1], [1, .2]]);                                                                                           // piano keys, from above
+           g.save(); g.transform(1, 0, -.35, 1, 10, 0);
+           for (let i = 0; i < 14; i++) { grey(g, .95); g.fillRect(i * 5.4, 10, 5, 30); }
+           grey(g, .03); [0, 1, 3, 4, 5, 7, 8, 10, 11, 12].forEach((i) => g.fillRect(i * 5.4 + 3.4, 10, 3.2, 18));
+           grey(g, .4); g.fillRect(-4, 8, 82, 2.5);
+           g.restore(); },
+  (g) => { vgrad(g, [[0, .04], [.5, .3], [1, .7]]); stars(g, 30, 21, 14);                                                       // a city at night, glowing behind
+           grey(g, .95); disc(g, 60, 8, 3.6); grey(g, .08); disc(g, 61.8, 7, 3.2);
+           grey(g, 0); g.fillRect(21.6, 3, 1.6, 26); g.fillRect(19.6, 13, 5.6, 3); g.fillRect(20.8, 16, 3.2, 14);                 // the tower
+           const r = seeded(9); let x = 0;
+           while (x < MW) { const w = 4 + r() * 6, h = 10 + r() * 20; grey(g, 0); g.fillRect(x, MH - h, w, h);
+             for (let wy = MH - h + 2; wy < MH - 1; wy += 2.6) for (let wx = x + 1; wx < x + w - 1; wx += 2) if (r() < .4) { grey(g, 1); g.fillRect(wx, wy, 1, 1); }
+             x += w + .8; } },
+  (g) => { vgrad(g, [[0, .5], [.55, .9], [.6, .3], [1, .12]]);                                                                    // a city at sunset, a bridge
+           grey(g, 1); disc(g, 44, 25, 7);
+           grey(g, .04); const r = seeded(4); let x = 30;
+           while (x < MW) { const w = 3 + r() * 5, h = 6 + r() * 14; g.fillRect(x, 27 - h, w, h); x += w + .4; }
+           g.fillRect(0, 26, MW, 1.2); g.fillRect(6, 10, 1.6, 17); g.fillRect(24, 10, 1.6, 17);
+           g.lineWidth = .8; g.beginPath(); g.moveTo(0, 18); g.quadraticCurveTo(7, 9, 7, 10); g.quadraticCurveTo(16, 26, 25, 10); g.quadraticCurveTo(28, 16, 32, 22); g.stroke();
+           for (let i = 0; i < 9; i++) { grey(g, .85 - i * .06); g.fillRect(40 - i * .6, 29 + i * 1.8, 8 + i * 1.2, .9); } },          // the sun on the water
+  (g) => { for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {                                                             // sun over the sea
+             const u = x / MW, v = y / MH; grey(g, v < .55 ? (Math.hypot(u - .5, (v - .5) * .64) < .14 ? 1 : .15 + v * .6) : (Math.sin(v * 60 + u * 4) > .2 ? .55 : .1)); g.fillRect(x, y, 1, 1); } },
+  (g) => { for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {                                                             // an empty road
+             const u = x / MW, v = y / MH; grey(g, v < .45 ? .2 + v : (Math.abs(u - .5) < (v - .45) * .9 ? (Math.abs(u - .5) < .02 && (v * 30) % 2 < 1 ? 1 : .3) : .1)); g.fillRect(x, y, 1, 1); } },
 ];
-function oneBit(fn, w, h, invert) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const g = c.getContext('2d'), img = g.createImageData(w, h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const on = fn(x / w, y / h) > BAYER[(x & 3) + (y & 3) * 4], lit = invert ? !on : on, i = (y * w + x) * 4;
+function oneBit(draw, invert) {
+  const src = document.createElement('canvas'); src.width = MW; src.height = MH;
+  const sg = src.getContext('2d'); draw(sg);
+  const d = sg.getImageData(0, 0, MW, MH).data;
+  const c = document.createElement('canvas'); c.width = MW; c.height = MH;
+  const g = c.getContext('2d'), img = g.createImageData(MW, MH);
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+    const i = (y * MW + x) * 4, lum = (d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11) / 255;
+    const on = lum > BAYER[(x & 3) + (y & 3) * 4], lit = invert ? !on : on;
     img.data[i] = img.data[i + 1] = img.data[i + 2] = lit ? 255 : 0; img.data[i + 3] = 255;
   }
   g.putImageData(img, 0, 0);
@@ -1033,7 +1146,7 @@ function oneBit(fn, w, h, invert) {
 }
 function setupSim(W, H) {
   Object.assign(sim, { W, H });
-  sim.mem ||= MEMORIES.map((fn) => [oneBit(fn, 48, 32, false), oneBit(fn, 48, 32, true)]);
+  sim.mem ||= MEMORIES.map((draw) => [oneBit(draw, false), oneBit(draw, true)]);
   const M = Math.min(W, H);
   sim.P = Math.max(3, Math.round(M / 210));                   // one pixel of the sky, in real pixels
   sim.sky = document.createElement('canvas');
