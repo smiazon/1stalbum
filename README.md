@@ -2,12 +2,17 @@
 
 new music every friday. one song a week for 12 weeks, album out jan 1st.
 
-The page counts down to the next Friday in words, plays each week's song once it's out (no pause, only start over),
-and has a blank white square on an easel, in front of a mountain sky, that visitors paint on for the twelve weeks
-(a limited amount of paint each, under the names already written there). On January 1st signing closes and we sign it too.
-A quiet wind plays after your first tap (toggle: "wind", top right), and faint clouds drift across the photo.
+The page opens on a 1984 Macintosh sitting on a desk. Tap it and the camera dives into its screen:
+inside is a small black-and-white world with two windows. **1st album** counts down to the next Friday in words
+and plays each week's song once it's out (no pause, only start over; play opens the angel visualizer).
+**sign the album** is the cover everyone signs for the twelve weeks: paint (a limited amount each), up to 3 words
+in a handwriting, and up to 8 pixel stickers, then a name and email or phone. The album is the only colour in the Mac.
+On phones the album opens full screen with the tools under your thumb; only its close box puts it away.
+On January 1st signing closes and we sign it too.
 
-Background photo: Unsplash (https://unsplash.com/license), stored in `docs/img/`.
+- Mac photo: Sailko, CC BY 3.0 (https://commons.wikimedia.org/wiki/File:Computer_macintosh_128k,_1984_(all_about_Apple_onlus).jpg), in `docs/img/`. The credit line on the page is required.
+- Font: ChicagoFLF, public domain (Robin Casady), in `docs/fonts/`.
+- Stickers: drawn in code, `docs/stickers.js`. Their ids must match `sticker_ids` in `supabase.sql`.
 
 - **Site:** GitHub Pages, published from the `docs/` folder on `main` (Settings → Pages → Deploy from a branch).
 - **Guestbook:** a free Supabase project, set up by `supabase.sql`.
@@ -36,10 +41,13 @@ The twelve release times are the `SONGS` list at the top of the script in `docs/
 
 Open `https://smiazon.github.io/1stalbum/#admin=<owner key>`:
 
-- **Sign it as us:** tap a spot, type the name, press sign. No email needed, works after signing closes, written larger.
-- **Remove a signature or a painting:** click it.
-- **Who signed:** click **signers (csv)** top right for every name, email or phone, and time.
-- **The cover:** click **artwork (png)** to download the signed square as a 3000×3000 image, every signature in place.
+(Or just sign with smiazon@gmail.com: that email has no daily limit, on any device.)
+
+- **paint:** sign as many times as you like, saved under your email.
+- **write:** tap a spot, type the name, press sign. Our signature, in marker, works after signing closes.
+- **hide:** tap a mark to hide it. Nothing is ever deleted.
+- **signers:** every name, email or phone, and time, as a csv. (Or the dashboard: `owner.html#admin=<owner key>`.)
+- **artwork:** the signed album as a 3000×3000 image, every signature in place.
   Signatures stay saved from day one through Jan 1; nothing resets between weeks.
 
 ## Rules (enforced in the database)

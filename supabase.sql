@@ -233,33 +233,77 @@ alter table private.contacts add column if not exists drawing_id uuid references
 
 -- checks a painting, rebuilds it with only the allowed fields, and measures its ink
 create or replace function private.clean_strokes(p jsonb, out strokes jsonb, out ink numeric)
-language plpgsql immutable as $$
-declare st jsonb; n int; i int; total int := 0; sz int; col text; arr int[]; clean jsonb := '[]'::jsonb;
+language plpgsql stable set search_path = public, private, extensions, pg_temp as $$
+-- A signature is a list of marks: brush strokes {c, s, p}, words {k:'tx'} and stickers {k:'st'}.
+declare
+  st jsonb; n int; i int; total int := 0; sz int; col text; arr int[]; clean jsonb := '[]'::jsonb;
+  kind text; v text; texts int := 0; stickers int := 0;
+  sticker_ids constant text[] := array['heart','star','moon','sun','flame','bolt','cherry','flower',
+                                       'eye','rainbow','note','disc','smile','ghost','sparkle','crown',
+                                       'halo','wing','headphones','cassette','vinyl','mic','kiss','rose',
+                                       'cloud','snowflake','mushroom','alien','skull','gem','butterfly','planet'];
 begin
   ink := 0;
   if p is null or jsonb_typeof(p) <> 'array' or jsonb_array_length(p) = 0 then raise exception 'paint something first'; end if;
   if jsonb_array_length(p) > 150 then raise exception 'too many strokes'; end if;
   for st in select value from jsonb_array_elements(p) loop
-    col := st->>'c';
-    sz := (st->>'s')::int;
-    if col is null or col !~ '^#[0-9a-fA-F]{6}$' then raise exception 'unknown colour'; end if;
-    if sz is null or sz not in (5, 12, 24) then raise exception 'unknown brush'; end if;
-    if jsonb_typeof(st->'p') <> 'array' then raise exception 'bad stroke'; end if;
-    n := jsonb_array_length(st->'p');
-    if n < 2 or n % 2 = 1 then raise exception 'bad stroke'; end if;
-    total := total + n / 2;
-    if total > 3000 then raise exception 'too much paint'; end if;
-    select array_agg(greatest(0, least(1000, round(v::numeric)))::int order by k)
-      into arr from jsonb_array_elements_text(st->'p') with ordinality as e(v, k);
-    if n = 2 then ink := ink + sz * sz;          -- a dot
-    else
-      i := 3;
-      while i <= n loop
-        ink := ink + sqrt(power(arr[i] - arr[i - 2], 2) + power(arr[i + 1] - arr[i - 1], 2)) * sz;
-        i := i + 2;
-      end loop;
+    if jsonb_typeof(st) <> 'object' then raise exception 'bad stroke'; end if;
+    kind := st->>'k';
+    if kind in ('tx', 'st') then
+      if coalesce(jsonb_typeof(st->'x'), '') <> 'number' or coalesce(jsonb_typeof(st->'y'), '') <> 'number' then raise exception 'bad stroke'; end if;
     end if;
-    clean := clean || jsonb_build_array(jsonb_build_object('c', col, 's', sz, 'p', to_jsonb(arr)));
+
+    if kind = 'tx' then                                   -- words, in one of the five hands
+      texts := texts + 1;
+      if texts > 3 then raise exception 'three words at most'; end if;
+      v := left(btrim(regexp_replace(coalesce(st->>'v', ''), '\s+', ' ', 'g')), 40);
+      if v = '' then raise exception 'type something first'; end if;
+      if private.is_blocked(v) then raise exception 'let''s keep it kind. try other words.'; end if;
+      col := st->>'c';
+      if col is null or col !~ '^#[0-9a-fA-F]{6}$' then raise exception 'unknown colour'; end if;
+      clean := clean || jsonb_build_array(jsonb_build_object(
+        'k', 'tx', 'v', v, 'c', col,
+        'f', greatest(0, least(4, coalesce(round((st->>'f')::numeric), 0)))::int,
+        'x', greatest(0, least(1000, round((st->>'x')::numeric)))::int,
+        'y', greatest(0, least(1000, round((st->>'y')::numeric)))::int,
+        'z', case when (st->>'z') in ('30', '50', '80') then (st->>'z')::int else 50 end,
+        'r', greatest(-20, least(20, coalesce(round((st->>'r')::numeric), 0)))::int));
+
+    elsif kind = 'st' then                                -- a sticker
+      stickers := stickers + 1;
+      if stickers > 8 then raise exception 'eight stickers at most'; end if;
+      if not coalesce(st->>'id' = any(sticker_ids), false) then raise exception 'unknown sticker'; end if;
+      clean := clean || jsonb_build_array(jsonb_build_object(
+        'k', 'st', 'id', st->>'id',
+        'x', greatest(0, least(1000, round((st->>'x')::numeric)))::int,
+        'y', greatest(0, least(1000, round((st->>'y')::numeric)))::int,
+        'z', case when (st->>'z') in ('60', '100', '160') then (st->>'z')::int else 100 end));
+
+    elsif kind is null then                               -- a brush stroke
+      col := st->>'c';
+      sz := (st->>'s')::int;
+      if col is null or col !~ '^#[0-9a-fA-F]{6}$' then raise exception 'unknown colour'; end if;
+      if sz is null or sz not in (5, 12, 24) then raise exception 'unknown brush'; end if;
+      if jsonb_typeof(st->'p') <> 'array' then raise exception 'bad stroke'; end if;
+      n := jsonb_array_length(st->'p');
+      if n < 2 or n % 2 = 1 then raise exception 'bad stroke'; end if;
+      total := total + n / 2;
+      if total > 3000 then raise exception 'too much paint'; end if;
+      select array_agg(greatest(0, least(1000, round(e.v::numeric)))::int order by e.o)
+        into arr from jsonb_array_elements_text(st->'p') with ordinality as e(v, o);
+      if n = 2 then ink := ink + sz * sz;          -- a dot
+      else
+        i := 3;
+        while i <= n loop
+          ink := ink + sqrt(power(arr[i] - arr[i - 2], 2) + power(arr[i + 1] - arr[i - 1], 2)) * sz;
+          i := i + 2;
+        end loop;
+      end if;
+      clean := clean || jsonb_build_array(jsonb_build_object('c', col, 's', sz, 'p', to_jsonb(arr)));
+
+    else
+      raise exception 'bad stroke';
+    end if;
   end loop;
   strokes := clean;
 end $$;
