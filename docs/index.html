@@ -659,12 +659,6 @@ audio.addEventListener('ended', () => {
 // Everything on screen is the song: the bins of the spectrum become mirrored neon petals,
 // last frame is pulled inward and turned (so it all spirals toward the centre), and a black
 // hole sits in the middle with a rainbow accretion ring that swells on the bass.
-let sharedCtx = null;
-function audioCtx() {
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!sharedCtx && AC) sharedCtx = new AC();
-  return sharedCtx;
-}
 const viz = { look: null, on: false, an: null, freq: new Uint8Array(512), raf: 0, t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
 const out = $('viz'), ox = out.getContext('2d');                       // what you see: the scene plus effects
 const vc = document.createElement('canvas'), vx = vc.getContext('2d');   // the scene, which spirals into itself
@@ -1806,11 +1800,15 @@ function fitMini() {
 }
 new ResizeObserver(fitMini).observe(rig);
 
-// a floppy drive waking up: a few soft clicks, made in the browser
+// a floppy drive waking up: a few soft clicks, made in the browser.
+// The sound engine opens for these clicks and closes straight after: on iPhones a live one can
+// switch the phone's audio hardware and bend the pitch of a song that's playing. Never during a song.
 function diskSound() {
-  const c = audioCtx();
-  if (!c) return;
-  c.resume?.();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC || (audio.src && !audio.paused && !audio.ended)) return;
+  let c;
+  try { c = new AC(); } catch { return; }
+  setTimeout(() => c.close?.().catch(() => {}), 1300);
   const noise = c.createBuffer(1, c.sampleRate * .03, c.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (d.length / 6));
