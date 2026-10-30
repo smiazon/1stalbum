@@ -218,6 +218,7 @@
   #focusBar .time { font-size: 12px; color: var(--soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
   #leave { padding: 8px 16px; }
   body.focus #gl { cursor: default; }
+  #oldViz { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; pointer-events: none; background: #000; }
   #loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #06070a; color: var(--dim); font: italic 15px var(--book); transition: opacity .8s; }
   body.ready #loading { opacity: 0; pointer-events: none; }
 
@@ -1537,7 +1538,6 @@ function fitTrip() {
   tripPlane.scale.set(w, h, 1);
   tripPlane.position.set(p.pos.x, p.pos.y + (p.look.y - p.pos.y) / (p.look.z - p.pos.z) * (tripPlane.position.z - p.pos.z), tripPlane.position.z);
   tripMat.uniforms.PLANE.value = w / h;
-  oldPlane.scale.set(h * innerWidth / innerHeight, h, 1); oldPlane.position.set(tripPlane.position.x, tripPlane.position.y, oldPlane.position.z);
 }
 tripPlane.renderOrder = 2;
 
@@ -1579,10 +1579,10 @@ function stepTrip(dt) {
   const u = tripMat.uniforms;
   const oldLook = OLD_LOOK[playingIdx];                      // songs one and two keep the visuals they were born with
   if (oldLook && trip.level > .003) {
-    if (out.width !== Math.round(innerWidth) || !trip.oldReady) { sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); trip.oldReady = true; oldTex.dispose(); }   // a new size needs a fresh texture
-    oldLook(performance.now()); oldTex.needsUpdate = true;
+    if (trip.oldW !== innerWidth || trip.oldH !== innerHeight) { sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height); trip.oldW = innerWidth; trip.oldH = innerHeight; }
+    oldLook(performance.now());
   }
-  oldMat.opacity = oldLook ? trip.level : 0;
+  out.style.opacity = oldLook ? trip.level.toFixed(3) : 0;
   u.uOpacity.value = oldLook ? 0 : trip.level; u.uTime.value = viz.t; u.uBass.value = viz.bass; u.uHigh.value = viz.high; u.uKick.value = viz.kick;
   if (trip.level < .002 && !trip.on) { trip.clips.forEach((c) => c.el && !c.el.paused && c.el.pause()); return; }
   if (trip.next) {
@@ -1600,13 +1600,14 @@ function stepTrip(dt) {
 setLayer('A', trip.cur);
 
 /* ================= the old visuals: song one's angel and song two's render, exactly as they were ================= */
-const out = document.createElement('canvas'), ox = out.getContext('2d');                       // what you see: the scene plus effects
+const out = document.createElement('canvas'), ox = out.getContext('2d');
+out.id = 'oldViz'; document.body.append(out);                    // full screen, like it always was                       // what you see: the scene plus effects
 const vc = document.createElement('canvas'), vx = vc.getContext('2d');   // the scene, which spirals into itself
 const tiny = document.createElement('canvas'), sx = tiny.getContext('2d');   // for the bloom
 const buf = document.createElement('canvas'), bx = buf.getContext('2d');
 
 function sizeViz() {
-  const dpr = Math.min(devicePixelRatio || 1, 1);   // drawn into a texture on the balcony
+  const dpr = Math.min(devicePixelRatio || 1, innerWidth < 760 ? 1.25 : 1.5);
   out.width = vc.width = buf.width = Math.round(innerWidth * dpr);
   out.height = vc.height = buf.height = Math.round(innerHeight * dpr);
   tiny.width = Math.ceil(vc.width / 5); tiny.height = Math.ceil(vc.height / 5);
@@ -2186,10 +2187,7 @@ function frameRender(now) {
 }
 
 
-// they play through the balcony glass, untouched
-const oldTex = new THREE.CanvasTexture(out); oldTex.colorSpace = THREE.SRGBColorSpace;
-const oldMat = new THREE.MeshBasicMaterial({ map: oldTex, toneMapped: false, transparent: true, opacity: 0, depthWrite: false });
-const oldPlane = plane(1, 1, oldMat, 0, 0, FAC.z + .55); oldPlane.renderOrder = 3;
+// they don't play on the balcony: they take the whole screen, the way they were born. leave brings the balcony back.
 const OLD_LOOK = { 0: frame, 1: frameRender };
 
 /* ---------- the views, and moving between them ---------- */
@@ -2411,7 +2409,7 @@ function loop(t) {
   mikoMesh.visible = mikoShadow.visible = view === 'miko' || !!(tween && tween.name === 'miko');   // she's at your feet: only there when you look down
   LAMPS.forEach((l, i) => { l.light.intensity = l.base * (.92 + .08 * Math.sin(viz.t * (.7 + i * .23) + i)); });
   if (albumDirty) paintEaselAlbum();
-  renderer.render(scene, camera);
+  if (!(OLD_LOOK[playingIdx] && trip.level > .995)) renderer.render(scene, camera);   // the balcony rests while an old song has the whole screen
 }
 
 
