@@ -79,7 +79,7 @@
   .chip:active { transform: scale(.97); }
   #toMiko .arrow { display: inline-block; margin-left: 6px; animation: nudge 1.8s ease-in-out infinite; }
   @keyframes nudge { 50% { transform: translateY(3px); } }
-  #back { left: 16px; top: max(16px, env(safe-area-inset-top)); }
+  #back { left: 16px; top: max(16px, env(safe-area-inset-top)); z-index: 6; }
   #backUp { left: 50%; top: max(16px, env(safe-area-inset-top)); transform: translateX(-50%); }
   #hoverTag { position: fixed; z-index: 3; pointer-events: none; padding: 6px 12px; border-radius: 999px; font-size: 13px; letter-spacing: .02em;
               background: rgba(244, 241, 234, .92); color: #111; transform: translate(-50%, -150%); opacity: 0; transition: opacity .2s; white-space: nowrap; }
@@ -2204,7 +2204,7 @@ function viewPose(name) {
     // look straight at the canvas, so it lies flat on the screen; the bedroom door to the right
     const f = FACING.clone().negate(), right = V(-f.z, 0, f.x);
     let d, shiftR = 0, shiftU = 0;
-    if (portrait()) { d = CANVAS_SIZE / (.92 * 2 * th * a); shiftU = -.42 * d * th; }
+    if (portrait()) { d = CANVAS_SIZE / (.92 * 2 * th * a); shiftU = -.36 * d * th; }      // a little room above it for the way back
     else { d = CANVAS_SIZE / (.66 * 2 * th); shiftR = .3 * d * th * a; }
     const pos = CANVAS_AT.clone().addScaledVector(f, -d).addScaledVector(right, shiftR).add(V(0, shiftU, 0));
     return { pos, look: pos.clone().add(f), fov };
