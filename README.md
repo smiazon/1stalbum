@@ -2,17 +2,21 @@
 
 new music every friday. one song a week for 12 weeks, album out jan 1st.
 
-The page opens on a 1984 Macintosh sitting on a desk. Tap it and the camera dives into its screen:
-inside is a small black-and-white world with two windows. **1st album** counts down to the next Friday in words
-and plays each week's song once it's out (no pause, only start over; play opens the angel visualizer).
-**sign the album** is the cover everyone signs for the twelve weeks: paint (a limited amount each), up to 3 words
-in a handwriting, and up to 8 pixel stickers, then a name and email or phone. The album is the only colour in the Mac.
-On phones the album opens full screen with the tools under your thumb; only its close box puts it away.
-On January 1st signing closes and we sign it too.
+You stand on a balcony at night (a small 3D scene, three.js). In front: a glass railing in a black frame,
+split down the middle; across the street a corporate brick office where robots work late. The songs sit in the
+left pane of glass. Press play and the office gives way to the song: licensed footage and patterns, hyper-saturated,
+switching on their own, reacting to the music. The balcony itself never changes.
 
-- Mac photo: Sailko, CC BY 3.0 (https://commons.wikimedia.org/wiki/File:Computer_macintosh_128k,_1984_(all_about_Apple_onlus).jpg), in `docs/img/`. The credit line on the page is required.
-- Font: ChicagoFLF, public domain (Robin Casady), in `docs/fonts/`.
-- Stickers: drawn in code, `docs/stickers.js`. Their ids must match `sticker_ids` in `supabase.sql`.
+- **sign album:** hover (or tap) the canvas on the easel to the right. The camera turns to it; the album lies
+  exactly over the canvas, with paint, words and stickers beside it. Behind it, a glass door into a dim bedroom.
+- **pet miko:** the camera looks down to Miko at your feet. Hover or tap her for a happy face, hearts and sparkles.
+- Songs play straight from the mp3; the visuals read a spectrum computed from the same file.
+
+Assets:
+- `docs/vendor/three.module.min.js`: three.js 0.169 (MIT).
+- `docs/video/`: short licensed clips (public domain or CC); every credit is in `docs/video/credits.json` and shown under "credits".
+- `docs/img/miko.png` + `miko.json`: Miko cut out from our photo, with eye positions for the happy face.
+- `docs/stickers.js`: the 32 pixel stickers. Their ids must match `sticker_ids` in `supabase.sql`.
 
 - **Site:** GitHub Pages, published from the `docs/` folder on `main` (Settings → Pages → Deploy from a branch).
 - **Guestbook:** a free Supabase project, set up by `supabase.sql`.
