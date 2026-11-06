@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#06070a">
+<meta name="theme-color" content="#0d0b0a">
 <title>1st album</title>
 <meta name="description" content="one song a week for 12 weeks. album out jan 1st.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,87 +14,98 @@
   :root {
     --book: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Literata', Georgia, serif;
     --ui: ui-sans-serif, -apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    --ink: #f4f1ea; --soft: rgba(244, 241, 234, .72); --dim: rgba(244, 241, 234, .42); --hair: rgba(244, 241, 234, .16);
-    --glass: rgba(10, 11, 15, .52);
+    --bg: #0d0b0a; --ink: #efe6d8; --soft: rgba(239, 230, 216, .7); --dim: rgba(239, 230, 216, .4); --hair: rgba(239, 230, 216, .14);
+    --warm: #f2b46b;
     --rainbow: #ffb3c6, #ffd6a5, #fdffb6, #caffbf, #9bf6ff, #a0c4ff, #bdb2ff, #ffc6ff, #ffb3c6;
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
-  body { background: #06070a; color: var(--ink); font: 15px/1.45 var(--ui); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
+  body { margin: 0; min-height: 100dvh; background: radial-gradient(120% 70% at 50% 0%, #1a1412, var(--bg) 60%) fixed; color: var(--ink);
+         font: 15px/1.45 var(--ui); -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
   button { font: inherit; color: inherit; touch-action: manipulation; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  body.hot #gl { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 4px; }
+  body.listening, body.signing { overflow: hidden; }
 
-  /* everything you touch floats over the scene; each view shows its own */
-  .ui { position: fixed; z-index: 2; opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s linear .45s; }
-  body[data-view="main"]:not(.moving) .in-main,
-  body[data-view="canvas"]:not(.moving) .in-canvas,
-  body[data-view="miko"]:not(.moving) .in-miko { opacity: 1; visibility: visible; transition: opacity .55s ease .05s, visibility 0s; }
-
-  .glass { background: var(--glass); border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px;
-           -webkit-backdrop-filter: blur(10px) saturate(1.1); backdrop-filter: blur(10px) saturate(1.1); }
-
-  /* the songs, set into the left half of the balcony glass */
-  #panel { display: flex; flex-direction: column; padding: 16px 18px 12px; overflow: hidden; }
-  .kicker { margin: 0 0 8px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
-  .lead { margin: 0 0 10px; font: clamp(17px, 1.7vw, 23px)/1.25 var(--book); letter-spacing: -.01em; }
-  .line { height: 1px; background: var(--hair); margin: 0 0 10px; flex: none; }
-  .line i { display: block; height: 1px; width: 0; background: var(--ink); }
-  .concept { margin: 0 0 10px; color: var(--soft); font-size: 13.5px; }
-  .player { display: flex; align-items: center; gap: 12px; padding: 4px 0 10px; border-bottom: 1px solid var(--hair); flex: none; }
-  .player .title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
-  .player .time { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--soft); }
+  /* ---------------- the conversation ---------------- */
+  #chat { max-width: 34rem; margin: 0 auto; padding: max(14vh, 64px) 24px 140px; }
+  .line { font: 20px/1.5 var(--book); margin: 0 0 16px; letter-spacing: -.005em; opacity: 0; transform: translateY(8px); transition: opacity .6s ease, transform .6s ease; }
+  .line.on { opacity: 1; transform: none; }
+  .line b { font-weight: normal; font-style: italic; color: #fff; }
+  .line.small { font-size: 16px; color: var(--soft); }
+  .line[hidden] { display: none; }
+  .typing { display: inline-flex; gap: 5px; margin: 2px 0 18px; padding: 10px 0; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--dim); animation: dot 1s ease-in-out infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 40% { transform: translateY(-4px); background: var(--soft); } }
+  .acts { display: flex; gap: 10px; flex-wrap: wrap; margin: -4px 0 22px; }
+  .act { display: inline-flex; align-items: center; gap: 10px; border: 0; border-radius: 999px; padding: 11px 20px 11px 12px; background: var(--ink); color: #15110e; font-weight: 600; font-size: 15px; cursor: pointer;
+         box-shadow: 0 0 0 0 rgba(242, 180, 107, .4); transition: transform .15s; }
+  .act:hover { transform: translateY(-1px); }
+  .act:active { transform: scale(.97); }
+  .act.ghost { background: none; color: var(--ink); border: 1px solid var(--hair); padding: 10px 18px; font-weight: 500; }
   /* play: a soft pastel rainbow ring, slowly turning */
-  .pbtn { position: relative; isolation: isolate; width: 34px; height: 34px; flex: none; padding: 0; border: 0; border-radius: 50%;
-          background: #fff; color: #111; cursor: pointer; display: grid; place-items: center; }
-  .pbtn::before { content: ''; position: absolute; inset: -2px; border-radius: 50%; z-index: -1;
-    background: conic-gradient(from var(--a), var(--rainbow)); animation: spin 7s linear infinite; }
-  .pbtn::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; z-index: -2; filter: blur(7px); opacity: .55;
-    background: conic-gradient(from var(--a), var(--rainbow)); animation: spin 7s linear infinite; }
-  .pbtn.on::before, .pbtn.on::after { animation-duration: 2.4s; }
-  .pbtn:disabled { color: #aaa; cursor: default; }
-  .pbtn:disabled::before, .pbtn:disabled::after { filter: grayscale(1); opacity: .35; }
-  .pbtn svg { width: 11px; height: 11px; margin-left: 2px; }
+  .ring { position: relative; isolation: isolate; width: 28px; height: 28px; flex: none; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; }
+  .ring::before { content: ''; position: absolute; inset: -2px; border-radius: 50%; z-index: -1; background: conic-gradient(from var(--a), var(--rainbow)); animation: spin 7s linear infinite; }
+  .ring svg { width: 10px; height: 10px; margin-left: 2px; }
   @keyframes spin { to { --a: 360deg; } }
-  #tracklist { list-style: none; margin: 6px 0 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-  #tracklist::-webkit-scrollbar { display: none; }
-  #tracklist li { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 4px 8px; margin: 0 -8px; border-radius: 6px; color: var(--dim); white-space: nowrap; }
-  #tracklist li .t { overflow: hidden; text-overflow: ellipsis; }
-  #tracklist li .d { font-size: 12px; }
-  #tracklist li .go { display: none; font-size: 12px; }
-  #tracklist li.now { color: var(--ink); }
-  #tracklist li.out { color: var(--ink); cursor: pointer; }
-  #tracklist li.out:hover { background: rgba(255, 255, 255, .1); }
-  #tracklist li.out:hover .d { display: none; }
-  #tracklist li.out:hover .go { display: inline; }
-  #tracklist li.out:active, #tracklist li.out.flash { background: var(--ink); color: #111; }
-  #tracklist li.playing { background: rgba(255, 255, 255, .16); }
-  @media (hover: none) { #tracklist li.out:hover { background: none; } #tracklist li.out:hover .d { display: inline; } #tracklist li.out:hover .go { display: none; } }
-  .meta { display: flex; gap: 14px; margin: 8px 0 0; font-size: 11.5px; color: var(--dim); flex: none; white-space: nowrap; overflow: hidden; }
+  .link { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; text-decoration-color: var(--dim); text-underline-offset: 4px; cursor: pointer; }
+  .link:hover { text-decoration-color: var(--ink); }
 
-  .chip { border: 1px solid rgba(255, 255, 255, .14); background: rgba(10, 11, 15, .55); color: var(--ink); border-radius: 999px; padding: 9px 16px;
-          font-size: 13.5px; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); white-space: nowrap; }
-  .chip:hover { background: rgba(30, 32, 40, .7); }
-  .chip:active { transform: scale(.97); }
-  #toMiko .arrow { display: inline-block; margin-left: 6px; animation: nudge 1.8s ease-in-out infinite; }
-  @keyframes nudge { 50% { transform: translateY(3px); } }
-  #back { left: 16px; top: max(16px, env(safe-area-inset-top)); z-index: 6; }
-  #backUp { left: 50%; top: max(16px, env(safe-area-inset-top)); transform: translateX(-50%); }
-  #hoverTag { position: fixed; z-index: 3; pointer-events: none; padding: 6px 12px; border-radius: 999px; font-size: 13px; letter-spacing: .02em;
-              background: rgba(244, 241, 234, .92); color: #111; transform: translate(-50%, -150%); opacity: 0; transition: opacity .2s; white-space: nowrap; }
-  body.hot[data-view="main"]:not(.moving) #hoverTag { opacity: 1; }
-  #creditsBtn { right: 14px; top: 10px; font-size: 11px; color: var(--dim); background: none; border: 0; cursor: pointer; padding: 4px; }
-  #credits { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(0, 0, 0, .55); }
-  #credits[hidden] { display: none; }
-  #credits .box { width: min(560px, calc(100vw - 32px)); max-height: 80vh; overflow: auto; padding: 18px 20px; font-size: 12.5px; color: var(--soft); }
-  #credits h2 { font: 18px var(--book); color: var(--ink); margin: 0 0 10px; }
-  #credits li { margin: 0 0 6px; }
-  #credits a { color: var(--ink); }
+  .songs { list-style: none; margin: -2px 0 22px; padding: 0; font-variant-numeric: tabular-nums; }
+  .songs li { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 9px 10px; margin: 0 -10px; border-radius: 10px; cursor: pointer; font-size: 15px; }
+  .songs li .n, .songs li .d { color: var(--dim); font-size: 13px; }
+  .songs li:hover { background: rgba(255, 255, 255, .06); }
+  .songs li:active, .songs li.flash { background: var(--ink); color: #15110e; }
+  .songs li:active .n, .songs li:active .d, .songs li.flash .n, .songs li.flash .d { color: #15110e; }
+  .songs li.playing .t::after { content: ' ♪'; color: var(--warm); }
 
+  .cover { display: flex; align-items: center; gap: 16px; margin: -2px 0 24px; }
+  .cover canvas { width: 76px; height: 76px; border-radius: 3px; box-shadow: 0 8px 24px -10px rgba(0, 0, 0, .8); cursor: pointer; transform: rotate(-2deg); background: #f5f3ed; }
+  .foot { margin: 34px 0 0; font-size: 12px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* the song you left playing, waiting at the bottom */
+  #now { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translate(-50%, 140%); z-index: 5; transition: transform .45s cubic-bezier(.3, 1.3, .5, 1);
+         display: flex; align-items: center; gap: 12px; padding: 8px 10px 8px 16px; border-radius: 999px; background: rgba(28, 23, 20, .92); border: 1px solid var(--hair);
+         -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); max-width: calc(100vw - 24px); font-size: 13.5px; cursor: pointer; }
+  body.has-song:not(.listening):not(.signing) #now { transform: translate(-50%, 0); }
+  #now .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+  #now .time { color: var(--soft); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  /* ---------------- listening: the whole screen is the song ---------------- */
+  #listen { position: fixed; inset: 0; z-index: 10; background: #000; opacity: 0; visibility: hidden; transition: opacity .8s ease, visibility 0s linear .8s; }
+  body.listening #listen { opacity: 1; visibility: visible; transition: opacity .8s ease, visibility 0s; }
+  #listen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .bar { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); z-index: 2;
+         display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 12px; border-radius: 999px; background: rgba(10, 9, 9, .55); border: 1px solid rgba(255, 255, 255, .08);
+         -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity .5s; }
+  #listen.sleepy .bar { opacity: 0; }
+  .bar .mid { flex: 1; min-width: 0; }
+  .bar .title { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+  .bar .time { font-size: 12px; color: var(--soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pp { position: relative; isolation: isolate; width: 36px; height: 36px; flex: none; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #111; cursor: pointer; display: grid; place-items: center; }
+  .pp::before { content: ''; position: absolute; inset: -2px; border-radius: 50%; z-index: -1; background: conic-gradient(from var(--a), var(--rainbow)); animation: spin 7s linear infinite; }
+  .pp svg { width: 12px; height: 12px; }
+  .pp .i-pause { display: none; }
+  .pp.on .i-play { display: none; }
+  .pp.on .i-pause { display: block; }
+  .pp.sm { width: 30px; height: 30px; }
+  .pp.sm svg { width: 10px; height: 10px; }
+  .seek { position: relative; height: 14px; cursor: pointer; touch-action: none; }
+  .seek::before { content: ''; position: absolute; left: 0; right: 0; top: 6px; height: 2px; border-radius: 1px; background: rgba(255, 255, 255, .18); }
+  .seek i { position: absolute; left: 0; top: 6px; height: 2px; width: 0; border-radius: 1px; background: #fff; }
+  .chip { border: 1px solid rgba(255, 255, 255, .16); background: none; color: var(--ink); border-radius: 999px; padding: 8px 15px; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+
+  /* ---------------- signing the cover ---------------- */
+  #sheet { position: fixed; inset: 0; z-index: 8; background: var(--bg); overflow-y: auto; opacity: 0; visibility: hidden; transform: translateY(16px);
+           transition: opacity .45s ease, transform .45s ease, visibility 0s linear .45s; }
+  body.signing #sheet { opacity: 1; visibility: visible; transform: none; transition: opacity .45s ease, transform .45s ease, visibility 0s; }
+  .sheetIn { max-width: 980px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 24px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; justify-items: center; }
+  .sheetHead { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sheetHead p { margin: 0; font: italic 18px var(--book); color: var(--soft); }
+  @media (min-width: 900px) { .sheetIn { grid-template-columns: auto 340px; align-items: start; padding-top: 28px; } .sheetHead { grid-column: 1 / -1; } }
   /* the album, laid exactly over the canvas on the easel */
   .sleeve {
-    position: fixed; z-index: 2; container-type: inline-size; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none; cursor: crosshair;
+    position: relative; width: min(92vw, 62dvh, 600px); aspect-ratio: 1; container-type: inline-size; border-radius: 2px; box-shadow: 0 20px 60px -20px rgba(0,0,0,.8); overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none; cursor: crosshair;
     background: radial-gradient(120% 90% at 30% 20%, #fdfcf9, #f3f1ea 70%, #ebe8df), #f5f3ed;
   }
   .sleeve::before {
@@ -112,7 +123,8 @@
   #delMark.on { display: grid; }
 
   /* the tools, beside the canvas */
-  #tools { display: flex; flex-direction: column; gap: 10px; padding: 14px; width: 330px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+  #tools { display: flex; flex-direction: column; gap: 10px; padding: 14px; width: min(100%, 600px); }
+  .glass { background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); border-radius: 14px; }
   .toolbox { display: flex; gap: 6px; }
   .toolbox button { width: 40px; height: 36px; border-radius: 9px; border: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .06); padding: 0; display: grid; place-items: center; cursor: pointer; }
   .toolbox button img { width: 20px; height: 20px; image-rendering: pixelated; filter: invert(1); opacity: .85; }
@@ -157,14 +169,12 @@
   .owner .btn { border: 1px solid rgba(255, 255, 255, .2); background: none; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
   .msg { font-size: 12.5px; color: var(--soft); min-height: 18px; }
   body.closed #tools .toolbox, body.closed #tools .tray, body.closed #signForm { display: none; }
-
-  /* miko, at your feet */
-  #mikoBox { cursor: grab; touch-action: none; }
+  #peek { cursor: grab; touch-action: none; }
   .mikoArt { position: absolute; inset: 0; transform-origin: 62% 40%; transition: transform .35s cubic-bezier(.3, 1.4, .5, 1); }
   .mikoArt img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none; -webkit-user-drag: none; pointer-events: none;
                  filter: drop-shadow(0 0 10px rgba(120, 200, 255, .35)) drop-shadow(0 0 2px rgba(255, 160, 220, .5)); animation: breathe 3.4s ease-in-out infinite; transform-origin: 50% 95%; }
   @keyframes breathe { 50% { transform: scale(1.012, 1.02); } }
-  #mikoBox.happy .mikoArt { animation: hop .6s cubic-bezier(.3, 1.6, .5, 1); }
+  #peek.happy .mikoArt { animation: hop .6s cubic-bezier(.3, 1.6, .5, 1); }
   @keyframes hop { 30% { translate: 0 -5%; } 60% { translate: 0 0; } 75% { translate: 0 -1.5%; } }
   /* her eyes: a dark ball, a pupil and a catchlight that look at you */
   .eye { position: absolute; border-radius: 50%; transform: translate(-50%, -50%); background: radial-gradient(circle, #3a2519 0 52%, #150d09 74%); overflow: hidden; pointer-events: none; }
@@ -174,109 +184,51 @@
                 transform: translate(calc(-50% + var(--gx, 0px)), calc(-50% + var(--gy, 0px))); transition: transform .12s ease-out; }
   .eye .glint2 { position: absolute; left: 62%; top: 64%; width: 12%; height: 12%; border-radius: 50%; background: rgba(255,255,255,.7); }
   .lid { position: absolute; border-radius: 50%; transform: translate(-50%, -50%) scaleY(0); transform-origin: 50% 0; transition: transform .07s ease-in; pointer-events: none; }
-  #mikoBox.blink .lid, #mikoBox.happy .lid { transform: translate(-50%, -50%) scaleY(1); }
+  #peek.blink .lid, #peek.happy .lid { transform: translate(-50%, -50%) scaleY(1); }
   .happyEye { position: absolute; border: 3px solid #1a1110; border-color: #1a1110 transparent transparent transparent; border-radius: 50%; opacity: 0; transform: translate(-50%, -30%); transition: opacity .1s; pointer-events: none; }
   .blush { position: absolute; border-radius: 50%; background: rgba(255, 110, 150, .55); filter: blur(4px); opacity: 0; transform: translate(-50%, -50%); transition: opacity .25s; pointer-events: none; }
-  #mikoBox.happy .happyEye, #mikoBox.happy .blush, #mikoBox.pet .blush { opacity: 1; }
-  .mikoHint { left: 50%; transform: translateX(-50%); bottom: max(46px, env(safe-area-inset-bottom)); font-size: 12.5px; color: var(--dim); pointer-events: none; }
+  #peek.happy .happyEye, #peek.happy .blush, #peek.pet .blush { opacity: 1; }
   .pop { position: fixed; z-index: 4; pointer-events: none; image-rendering: pixelated; animation: rise 1.4s ease-out forwards; }
   @keyframes rise { 0% { opacity: 0; transform: translate(-50%, 0) scale(.4); } 15% { opacity: 1; transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), -110px) scale(.9) rotate(var(--rot)); } }
-  .mikoName { left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom)); font: italic 15px var(--book); color: var(--soft); pointer-events: none; }
+  #peek { position: fixed; left: 50%; bottom: -2px; width: min(320px, 74vw); aspect-ratio: 900 / 816; z-index: 6; transform: translate(-50%, 105%); transition: transform .6s cubic-bezier(.3, 1.25, .5, 1);
+          cursor: grab; touch-action: none; }
+  body.peeking #peek { transform: translate(-50%, 30%); }
+  #peekBye { position: fixed; z-index: 7; right: 14px; bottom: max(14px, env(safe-area-inset-bottom)); opacity: 0; pointer-events: none; transition: opacity .4s .3s; font: italic 14px var(--book); color: var(--ink);
+              background: rgba(28, 23, 20, .9); border: 1px solid var(--hair); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
+  body.peeking #peekBye { opacity: 1; pointer-events: auto; }
 
-
-  /* play / pause, the time, and where you are in the song */
-  .pbtn .i-pause { display: none; margin: 0; }
-  .pbtn.on .i-play { display: none; }
-  .pbtn.on .i-pause { display: block; }
-  .seek { position: relative; height: 14px; margin: -4px 0 6px; cursor: pointer; flex: none; touch-action: none; }
-  .seek::before { content: ''; position: absolute; left: 0; right: 0; top: 6px; height: 2px; border-radius: 1px; background: var(--hair); }
-  .seek i { position: absolute; left: 0; top: 6px; height: 2px; width: 0; border-radius: 1px; background: var(--ink); }
-  .seek i::after { content: ''; position: absolute; right: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); opacity: 0; transition: opacity .2s; }
-  .seek:hover i::after, .seek.drag i::after { opacity: 1; }
-
-  /* the two invitations: big, bright, impossible to miss */
-  .cta { display: inline-flex; align-items: center; gap: 9px; border: 0; border-radius: 999px; padding: 13px 22px; font-size: 15.5px; font-weight: 600; letter-spacing: .01em;
-         background: #f6f2e9; color: #15130f; cursor: pointer; white-space: nowrap;
-         box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .7), 0 0 0 6px rgba(246, 242, 233, .1), 0 0 28px rgba(255, 220, 160, .35); animation: invite 2.8s ease-in-out infinite; }
-  .cta:hover { background: #fff; transform: translateY(-1px) scale(1.03); }
-  .cta:active { transform: scale(.97); }
-  .cta img { width: 22px; height: 22px; image-rendering: pixelated; }
-  .cta .pen { font-size: 17px; }
-  @keyframes invite { 50% { box-shadow: 0 10px 30px -8px rgba(0, 0, 0, .7), 0 0 0 10px rgba(246, 242, 233, .06), 0 0 40px rgba(255, 220, 160, .5); } }
-  #toMiko { left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translateX(-50%); }
-  #toMiko:hover { transform: translateX(-50%) translateY(-1px) scale(1.03); }
-  #toCanvas { display: inline-flex; }
-
-  /* focus: while a song plays, only the view, and a small bar to steer it */
-  body.focus .in-main { opacity: 0 !important; visibility: hidden !important; transition: opacity .5s ease, visibility 0s linear .5s !important; }
-  body.focus[data-view="main"]:not(.moving) .in-focus { opacity: 1; visibility: visible; transition: opacity .6s ease .3s, visibility 0s; }
-  #focusBar { left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100vw - 24px));
-              display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 14px; border-radius: 999px; }
-  #focusBar .fmid { flex: 1; min-width: 0; }
-  #focusBar .ftitle { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
-  #focusBar .seek { margin: 0; }
-  #focusBar .time { font-size: 12px; color: var(--soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  #leave { padding: 8px 16px; }
-  body.focus #gl { cursor: default; }
-  #oldViz { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; pointer-events: none; background: #000; }
-  #loading { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; background: #06070a; color: var(--dim); font: italic 15px var(--book); transition: opacity .8s; }
-  body.ready #loading { opacity: 0; pointer-events: none; }
-
-  @media (prefers-reduced-motion: reduce) { .pbtn::before, .pbtn::after, #toMiko .arrow { animation: none; } }
-
-  /* phones: the album fills the width, the tools sit under it */
-  @media (max-width: 760px), (orientation: portrait) {
-    #toCanvas { left: auto !important; top: auto !important; right: 14px; bottom: max(22px, env(safe-area-inset-bottom)); padding: 12px 16px; font-size: 14px; }
-    #toMiko { left: 14px; transform: none; padding: 12px 16px; font-size: 14px; }
-    #toMiko:hover { transform: none; }
-    #focusBar .time { display: none; }
-    #tools { width: auto; left: 10px !important; right: 10px; top: auto !important; bottom: max(10px, env(safe-area-inset-bottom)); max-height: 46dvh; padding: 10px; gap: 8px; }
-    .toolbox button { width: 44px; height: 38px; }
-    .lead { font-size: 18px; }
-  }
+  @media (max-width: 600px) { .line { font-size: 18.5px; } #chat { padding-top: max(10vh, 56px); } }
+  @media (prefers-reduced-motion: reduce) { .line { transition: none; } .ring::before, .pp::before, .typing i { animation: none; } }
 </style>
 </head>
-<body data-view="main">
-<canvas id="gl" aria-label="a balcony at night, across from an office building"></canvas>
-<div id="loading">a balcony, somewhere…</div>
+<body>
+<main id="chat" aria-live="polite">
+  <div id="thread"></div>
+  <p class="foot"><span id="sigCount"></span><span id="week"></span><span id="peers"></span></p>
+</main>
 
-<!-- the balcony -->
-<section class="ui in-main glass" id="panel" aria-label="the songs">
-  <p class="kicker">1st album · new music every friday</p>
-  <p class="lead" id="lead">&nbsp;</p>
-  <div class="line"><i id="bar"></i></div>
-  <p class="concept">i'm making and releasing one song a week for 12 weeks. album out jan 1st.</p>
-  <div class="player">
-    <button class="pbtn" id="pPlay" disabled aria-label="play"><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="9.4" y="2" width="3.6" height="12" rx="1" fill="currentColor"/></svg></button>
-    <span class="title" id="pTitle">friday</span>
-    <span class="time" id="pLen"></span>
+<button id="now" aria-label="back to the song"><span class="t" id="nowTitle"></span><span class="time" id="nowTime"></span>
+  <span class="pp sm" id="nowPlay" role="button" aria-label="pause"><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="9.4" y="2" width="3.6" height="12" rx="1" fill="currentColor"/></svg></span></button>
+
+<div id="listen" aria-hidden="true">
+  <div class="bar">
+    <button class="pp" id="lPlay" aria-label="pause"><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="9.4" y="2" width="3.6" height="12" rx="1" fill="currentColor"/></svg></button>
+    <div class="mid"><span class="title" id="lTitle"></span><div class="seek" id="lSeek" aria-label="song position"><i></i></div></div>
+    <span class="time" id="lTime"></span>
+    <button class="chip" id="back">back</button>
   </div>
-  <div class="seek" id="pSeek" aria-label="song position"><i></i></div>
-  <ol id="tracklist" aria-label="the twelve songs"></ol>
-  <p class="meta"><span id="sigCount"></span><span id="week"></span><span id="peers"></span></p>
-</section>
-<div id="hoverTag">sign album</div>
-<button class="ui in-main cta" id="toMiko"><img alt="" id="pawIcon">pet miko <span class="arrow">↓</span></button>
-<button class="ui in-main cta" id="toCanvas"><span class="pen">✎</span> sign the album</button>
-<!-- while a song plays, only this -->
-<div class="ui in-focus glass" id="focusBar">
-  <button class="pbtn" id="fPlay" aria-label="pause"><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="9.4" y="2" width="3.6" height="12" rx="1" fill="currentColor"/></svg></button>
-  <div class="fmid"><span class="ftitle" id="fTitle"></span><div class="seek" id="fSeek" aria-label="song position"><i></i></div></div>
-  <span class="time" id="fTime"></span>
-  <button class="chip" id="leave">leave</button>
 </div>
-<button class="ui in-main" id="creditsBtn">credits</button>
-<div id="credits" hidden><div class="box glass"><h2>credits</h2><ul id="creditList"></ul><button class="chip" id="creditsClose">close</button></div></div>
 
-<!-- the canvas -->
-<button class="ui in-canvas chip" id="back">← balcony</button>
-<div class="ui in-canvas sleeve" id="sleeve">
-  <span class="emboss title">new music every friday</span>
-  <span class="emboss serial" id="serial">no. 0000001</span>
-  <canvas id="paint"></canvas>
-  <button type="button" id="delMark" aria-label="take this off" title="take this off">&times;</button>
-</div>
-<section class="ui in-canvas glass" id="tools" aria-label="sign the album">
+<div id="sheet" aria-label="sign the cover">
+  <div class="sheetIn">
+    <div class="sheetHead"><p>everyone who listens is on it.</p><button class="chip" id="done">done</button></div>
+    <div class="sleeve" id="sleeve">
+      <span class="emboss title">new music every friday</span>
+      <span class="emboss serial" id="serial">no. 0000001</span>
+      <canvas id="paint"></canvas>
+      <button type="button" id="delMark" aria-label="take this off" title="take this off">&times;</button>
+    </div>
+    <section class="glass" id="tools" aria-label="sign the album">
   <div class="toolbox" id="toolbox" role="toolbar" aria-label="tools">
     <button data-tool="brush" class="on" title="paint" aria-label="paint"><img alt=""></button>
     <button data-tool="text" title="write" aria-label="write"><img alt=""></button>
@@ -318,18 +270,15 @@
   </form>
   <div class="msg" id="msg" aria-live="polite"></div>
 </section>
+  </div>
+</div>
 
-<!-- miko -->
-<button class="ui in-miko chip" id="backUp">↑ back up</button>
-<div class="ui in-miko" id="mikoBox" role="button" aria-label="pet miko" tabindex="0"><div class="mikoArt" id="mikoArt"><img id="mikoImg" alt="miko, an italian greyhound"></div></div>
-<p class="ui in-miko mikoHint">move over her to pet her · tap her</p>
-<p class="ui in-miko mikoName">miko</p>
+<div id="peek" role="button" aria-label="pet miko" tabindex="0"><div class="mikoArt" id="mikoArt"><img id="mikoImg" alt="miko, an italian greyhound"></div></div>
+<button id="peekBye">bye miko</button>
 
 <audio id="audio" preload="none"></audio>
 <script src="stickers.js"></script>
 <script type="module">
-import * as THREE from './vendor/three.module.min.js';
-
 /* ---------------- the twelve fridays ---------------- */
 // One song a week, made that week. Each drops at midnight Eastern on its Friday.
 // When a song is finished, put the mp3 in docs/tracks/ and set its src (and its title).
@@ -378,6 +327,8 @@ let clockSkew = 0;                             // server time minus this device'
 const now = () => Date.now() + clockSkew + (PREVIEW ? Math.max(0, SONGS[PREVIEW - 1].t + 60000 - Date.now() - clockSkew) : 0);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
+
+
 /* ---------------- little 1-bit pictures ---------------- */
 // Drawn a pixel at a time, like everything on the first Mac.
 function bits(rows) {
@@ -420,6 +371,8 @@ const ICON = {
     'kwwwwwwwk..', 'kwwwwwwwwk.', 'kwwwwwkkkkk', 'kwwkwwk....', 'kwk.kwwk...', 'kk..kwwk...', 'k....kwwk..', '.....kwwk..', '......kk...']),
 };
 
+
+
 /* ---------------- the countdown, spelled out ---------------- */
 const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
   'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
@@ -445,67 +398,100 @@ const songName = (i) => SONGS[i].title || `song ${words(i + 1)}`;
 const dateOf = (i) => new Date(SONGS[i].t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).toLowerCase();
 
 
+
+/* ================================================================================================
+   a message, late at night
+   No interface: someone writes to you, a line at a time. The newest song, the ones before it, the
+   countdown, how many are listening with you, the cover everyone signs, and miko.
+   ================================================================================================ */
 document.querySelectorAll('#toolbox [data-tool]').forEach((b) => { b.querySelector('img').src = ICON[b.dataset.tool]; });
 $('undo').querySelector('img').src = ICON.undo;
 $('clear').querySelector('img').src = ICON.clear;
 
-let peersText = '', shown = -1;
-function tick() {
-  const t = now();
-  const out = SONGS.filter((s) => s.t <= t).length;            // songs released so far
-  if (out < SONGS.length) {
-    const next = SONGS[out], from = out ? SONGS[out - 1].t : STARTED;
-    $('bar').style.width = (clamp((t - from) / (next.t - from), 0, 1) * 100).toFixed(3) + '%';   // how much of this week is gone
-    const what = out === SONGS.length - 1 ? 'song twelve and the album arrive' : `song ${words(out + 1)} arrives`;
-    $('lead').textContent = `${what} in ${spelled(next.t - t)}.`;
-  } else {
-    $('bar').style.width = '100%';
-    $('lead').textContent = 'twelve songs. the album is here.';
-  }
-  if (out !== shown) { drawTracklist(out); drawPlayer(out); shown = out; }
-  if ($('outIn') && out < SONGS.length) $('outIn').textContent = `out in ${Math.max(0, Math.ceil((SONGS[out].t - t) / 1000)).toLocaleString()} seconds`;
-  $('peers').textContent = peersText;
-  windowTick(t);
-}
+const audio = $('audio');
+let playingIdx = -1, peersText = '', others = 0, shown = -1;
+const say = (text, hold = 4000) => { msg.textContent = text; clearTimeout(say.t); if (hold) say.t = setTimeout(() => { if (msg.textContent === text) msg.textContent = ''; }, hold); };
+const PLAY_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg>';
+const thread = $('thread');
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const released = () => SONGS.filter((s) => s.t <= now()).length;
 
-// the tracklist: released songs play, this week's is being made, the rest wait
-function drawTracklist(out) {
-  const list = $('tracklist'); list.innerHTML = '';
-  SONGS.forEach((s, i) => {
-    const li = document.createElement('li');
-    const n = document.createElement('span'); n.textContent = String(i + 1).padStart(2, '0');
-    const t = document.createElement('span'); t.className = 't';
-    const d = document.createElement('span'); d.className = 'd'; d.textContent = dateOf(i);
-    li.append(n, t, d);
-    if (i < out) {
-      li.className = 'out'; t.textContent = songName(i);
-      li.tabIndex = 0; li.setAttribute('role', 'button'); li.title = `play ${songName(i)}`;
-      const go = document.createElement('span'); go.className = 'go'; go.textContent = 'play ▶'; li.append(go);
+// what to say first depends on when you're here
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 5) return ['hey.', "you're up late."];
+  if (h < 12) return ['morning.'];
+  if (h < 18) return ['hey.'];
+  return ['hey.', 'long day?'];
+}
+function buildThread(animate) {
+  const out = released();
+  thread.innerHTML = '';
+  const L = greeting().map((t) => el('p', 'line', t));
+  L.push(el('p', 'line', "i'm making a song every week, for twelve weeks. the album comes out january 1st."));
+  if (out) {
+    const i = out - 1;
+    L.push(el('p', 'line', `this week's is called <b>${songName(i)}</b>.`));
+    const acts = el('div', 'line acts');
+    const b = el('button', 'act', `<span class="ring">${PLAY_SVG}</span>play it`); b.onclick = () => play(i);
+    acts.append(b); L.push(acts);
+  } else L.push(el('p', 'line', 'the first one comes friday.'));
+  const peers = el('p', 'line small'); peers.id = 'peersLine'; peers.hidden = !others; peers.textContent = peersText; L.push(peers);
+  if (out < SONGS.length) L.push(el('p', 'line', `the next one comes in <span id="next"></span>.`));
+  if (out > 1) {
+    L.push(el('p', 'line', 'the ones before it:'));
+    const ol = el('ol', 'line songs');
+    for (let i = out - 2; i >= 0; i--) {
+      const li = el('li', '', `<span class="n">${String(i + 1).padStart(2, '0')}</span><span class="t">${songName(i)}</span><span class="d">${dateOf(i)}</span>`);
+      li.dataset.i = i; li.tabIndex = 0; li.setAttribute('role', 'button');
       li.onclick = () => choose(li, i);
       li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(li, i); } };
-    } else if (i === out) {
-      li.className = 'now'; t.id = 'outIn';
+      ol.append(li);
     }
-    if (i === playingIdx && !audio.ended && !audio.paused) li.classList.add('playing');
-    list.append(li);
-  });
+    L.push(ol);
+  }
+  L.push(el('p', 'line', 'one more thing. everyone who listens signs the cover. you should too.'));
+  const cover = el('div', 'line cover');
+  const thumb = el('canvas'); thumb.id = 'coverThumb'; thumb.width = thumb.height = 192; thumb.title = 'the cover'; thumb.onclick = () => openSheet(true);
+  const sign = el('button', 'act ghost', 'sign the cover'); sign.onclick = () => openSheet(true);
+  cover.append(thumb, sign); L.push(cover);
+  L.push(el('p', 'line small', `<button class="link" id="mikoLink">miko</button> says hi.`));
+  L.forEach((x) => thread.append(x));
+  $('mikoLink').onclick = () => peek(true);
+  albumChanged(); markPlaying(); tick();
+  reveal(L, animate);
+}
+// the lines arrive one by one, with a little typing in between. tap to have them all at once.
+let revealing = null;
+function reveal(lines, animate) {
+  clearTimeout(revealing);
+  const all = () => { clearTimeout(revealing); thread.querySelector('.typing')?.remove(); lines.forEach((l) => l.classList.add('on')); };
+  if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) return all();
+  let k = 0;
+  const dots = el('div', 'typing', '<i></i><i></i><i></i>');
+  const next = () => {
+    while (k < lines.length && lines[k].hidden) k++;
+    if (k >= lines.length) { dots.remove(); try { sessionStorage.setItem('heard', '1'); } catch {} return; }
+    const l = lines[k];
+    l.before(dots);
+    const wait = l.classList.contains('acts') || l.classList.contains('songs') || l.classList.contains('cover') ? 220 : 300 + Math.min(650, l.textContent.length * 11);
+    revealing = setTimeout(() => { dots.remove(); l.classList.add('on'); k++; revealing = setTimeout(next, 260); }, wait);
+  };
+  addEventListener('pointerdown', all, { once: true });
+  next();
 }
 
-// the player holds the newest song, once there is one
-function drawPlayer(out) {
-  if (!out) { $('pPlay').disabled = true; $('pTitle').textContent = 'friday'; return; }
-  const i = out - 1;
-  if (playingIdx < 0) $('pTitle').textContent = songName(i);
-  $('pPlay').disabled = false;
-  $('pPlay').onclick = () => (playingIdx < 0 ? play(i) : togglePlay());
+function tick() {
+  const t = now(), out = released();
+  if (shown >= 0 && out !== shown) buildThread(false);        // a new song arrived while you were here
+  shown = out;
+  if ($('next') && out < SONGS.length) $('next').textContent = spelled(SONGS[out].t - t);
+  $('peers').textContent = others ? `${others + 1} here now` : '';
+  windowTick(t);
 }
-const clock = (sec) => isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}` : '–:––';
+const markPlaying = () => thread.querySelectorAll('.songs li').forEach((li) => li.classList.toggle('playing', +li.dataset.i === playingIdx && !audio.paused));
 
-/* ---------------- play: no pause, only start over ---------------- */
-const audio = $('audio');
-let playingIdx = -1;
-const say = (text, hold = 4000) => { msg.textContent = text; clearTimeout(say.t); if (hold) say.t = setTimeout(() => { if (msg.textContent === text) msg.textContent = ''; }, hold); };
-// picking a song from the list: the row blinks twice, like a menu item being chosen
+/* ---------------- the song: the whole screen, a bar to steer it, back to come back ---------------- */
 function choose(li, i) {
   if (li.classList.contains('flash')) return;
   play(i);
@@ -515,55 +501,168 @@ function choose(li, i) {
 }
 function play(i) {
   const s = SONGS[i];
-  if (!s.src) { $('pTitle').textContent = 'almost up. refresh in a minute.'; return; }
-  if (playingIdx === i && audio.src && !audio.ended) {     // already this song: carry on, and look out again
-    if (audio.paused) audio.play().catch(() => {});
-    setFocus(true);
-    return;
+  if (!s.src) return;
+  if (playingIdx !== i || audio.ended || !audio.src) {
+    if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;
+    playingIdx = i; hear(s.src);
+    $('lTitle').textContent = $('nowTitle').textContent = songName(i);
   }
-  if (playingIdx !== i) audio.src = s.src; else audio.currentTime = 0;   // a new song, or this one again after it ended
-  playingIdx = i;
-  hear(s.src);
-  $('pTitle').textContent = songName(i);
   audio.play().catch(() => {});
-  $('fTitle').textContent = songName(i);
-  setFocus(true);
-  [...$('tracklist').children].forEach((li, j) => li.classList.toggle('playing', j === i));
+  document.body.classList.add('has-song');
+  listen(true);
 }
-// play and pause. Playing again from the balcony puts you back in front of the view.
-function togglePlay() {
-  if (playingIdx < 0) return;
-  if (audio.paused || audio.ended) { audio.play().catch(() => {}); if (!document.body.classList.contains('focus')) setFocus(true); }
-  else audio.pause();
-}
-// focus: while a song plays you only look out; leave brings everything back (the song keeps going)
-function setFocus(on) {
-  document.body.classList.toggle('focus', on);
-  tripOn(on);
-  if (on) { hot(false); if (view !== 'main') go('main'); }
+function togglePlay() { if (playingIdx < 0) return; if (audio.paused || audio.ended) audio.play().catch(() => {}); else audio.pause(); }
+function listen(on) {
+  if (on && !document.body.classList.contains('listening')) { sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height); wake(); }
+  document.body.classList.toggle('listening', on);
+  $('listen').setAttribute('aria-hidden', String(!on));
 }
 const playing = () => !audio.paused && !audio.ended;
 function showTime() {
-  const f = audio.duration ? audio.currentTime / audio.duration : 0;
-  $('pLen').textContent = $('fTime').textContent = playingIdx < 0 ? '' : `${clock(audio.currentTime)} / ${clock(audio.duration)}`;
+  const f = audio.duration ? audio.currentTime / audio.duration : 0, txt = `${clock(audio.currentTime)} / ${clock(audio.duration)}`;
+  $('lTime').textContent = txt; $('nowTime').textContent = clock(audio.currentTime);
   document.querySelectorAll('.seek i').forEach((b) => { b.style.width = (f * 100).toFixed(2) + '%'; });
 }
-['play', 'pause', 'ended'].forEach((ev) => audio.addEventListener(ev, () => { $('pPlay').classList.toggle('on', playing()); $('fPlay').classList.toggle('on', playing()); }));
+const clock = (sec) => isFinite(sec) ? `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}` : '–:––';
+['play', 'pause', 'ended'].forEach((ev) => audio.addEventListener(ev, () => { ['lPlay', 'nowPlay'].forEach((id) => $(id).classList.toggle('on', playing())); markPlaying(); }));
 audio.addEventListener('timeupdate', showTime);
 audio.addEventListener('loadedmetadata', showTime);
-audio.addEventListener('ended', () => {
-  [...$('tracklist').children].forEach((li) => li.classList.remove('playing'));
-  setTimeout(() => { if (audio.ended) setFocus(false); }, 2200);
-});
-$('fPlay').onclick = togglePlay;
-$('leave').onclick = () => setFocus(false);
-// drag along a bar to move through the song
+audio.addEventListener('ended', () => setTimeout(() => { if (audio.ended) listen(false); }, 2200));
+$('lPlay').onclick = togglePlay;
+$('back').onclick = () => listen(false);
+$('now').onclick = (e) => { if (e.target.closest('#nowPlay')) togglePlay(); else listen(true); };
 document.querySelectorAll('.seek').forEach((bar) => {
   const to = (e) => { const r = bar.getBoundingClientRect(); if (audio.duration) { audio.currentTime = clamp((e.clientX - r.left) / r.width, 0, 1) * audio.duration; showTime(); } };
-  bar.addEventListener('pointerdown', (e) => { if (playingIdx < 0) return; bar.setPointerCapture(e.pointerId); bar.classList.add('drag'); to(e); });
-  bar.addEventListener('pointermove', (e) => { if (bar.classList.contains('drag')) to(e); });
-  bar.addEventListener('pointerup', () => bar.classList.remove('drag'));
-  bar.addEventListener('pointercancel', () => bar.classList.remove('drag'));
+  bar.addEventListener('pointerdown', (e) => { bar.setPointerCapture(e.pointerId); bar.dataset.drag = 1; to(e); });
+  bar.addEventListener('pointermove', (e) => { if (bar.dataset.drag) to(e); });
+  bar.addEventListener('pointerup', () => { delete bar.dataset.drag; });
+});
+// the bar fades when you're still, and comes back when you move
+let sleepT;
+function wake() { $('listen').classList.remove('sleepy'); clearTimeout(sleepT); sleepT = setTimeout(() => $('listen').classList.add('sleepy'), 3200); }
+$('listen').addEventListener('pointermove', (e) => { wake(); const k = out.width / innerWidth; viz.look = { x: e.clientX * k, y: e.clientY * k, at: performance.now() }; });
+$('listen').addEventListener('pointerdown', wake);
+
+// songs one and two keep the visuals they were born with; the rest: a warm light in a dark room, breathing with the song
+const motes = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), s: .3 + Math.random(), v: .0004 + Math.random() * .0012, p: Math.random() * 6.3 }));
+function frameLight() {
+  const W = out.width, H = out.height, M = Math.min(W, H), t = viz.t, B = viz.bass, K = viz.kick, Hi = viz.high;
+  ox.globalCompositeOperation = 'source-over'; ox.globalAlpha = 1;
+  ox.fillStyle = 'rgba(7, 5, 5, .34)'; ox.fillRect(0, 0, W, H);                      // the dark keeps a little of what was there
+  ox.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 3; i++) {                                                      // three slow lights, like a lamp through a curtain
+    const x = W * (.5 + .26 * Math.sin(t * (.07 + i * .03) + i * 2.1)), y = H * (.5 + .2 * Math.cos(t * (.09 + i * .02) + i));
+    const r = M * (.32 + i * .06) * (1 + B * .35 + K * .12);
+    const hue = ([28, 346, 282][i] + Math.sin(t * .05 + i) * 10 + 360) % 360;   // amber, rose, a deep violet: lamplight colours
+    const g = ox.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `hsla(${hue}, 80%, ${46 + K * 10}%, ${.1 + B * .14})`); g.addColorStop(.5, `hsla(${hue}, 75%, 32%, ${.04 + B * .05})`); g.addColorStop(1, 'hsla(0,0%,0%,0)');
+    ox.fillStyle = g; ox.fillRect(0, 0, W, H);
+  }
+  for (const m of motes) {                                                           // dust in the light, catching on the high notes
+    m.y -= m.v * (1 + B * 2); m.x += Math.sin(t * .4 + m.p) * .0004;
+    if (m.y < -.02) { m.y = 1.02; m.x = Math.random(); }
+    const a = (.12 + .5 * Hi + .3 * Math.max(0, Math.sin(t * 1.3 + m.p))) * m.s;
+    ox.fillStyle = `rgba(255, 220, 180, ${a.toFixed(3)})`;
+    ox.beginPath(); ox.arc(m.x * W, m.y * H, (1 + m.s * 1.6) * (M / 900), 0, 6.283); ox.fill();
+  }
+  ox.globalCompositeOperation = 'source-over';
+}
+const LOOK = { 0: frame, 1: frameRender };
+
+/* ---------------- the cover ---------------- */
+function openSheet(on) {
+  document.body.classList.toggle('signing', on);
+  if (on) { peek(false); requestAnimationFrame(() => requestAnimationFrame(fitCanvas)); }
+  else { sel = null; redraw(); }
+}
+$('done').onclick = () => openSheet(false);
+// the little cover in the conversation follows every stroke
+function albumChanged() {
+  const c = $('coverThumb'); if (!c) return;
+  const g = c.getContext('2d'), S = c.width;
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = '#f5f3ed'; g.fillRect(0, 0, S, S);
+  g.globalCompositeOperation = 'multiply'; paintAlbum(g, S, true); g.globalCompositeOperation = 'source-over';
+}
+
+/* ---------------- miko ----------------
+   She peeks up from the bottom of the screen. Her eyes follow you, she blinks, and if you
+   stroke her, hearts come out; tap her and she hops and smiles. */
+let mikoInfo = { width: 900, height: 816, eyes: [], eyeRadius: 20 }, mikoEyes = [], mikoReady = null;
+async function loadMiko() {
+  try { mikoInfo = await (await fetch('img/miko.json')).json(); } catch {}
+  const img = $('mikoImg'); img.src = 'img/miko.png'; await img.decode();
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const fur = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+  fur.canvas.width = W; fur.canvas.height = H; fur.drawImage(img, 0, 0);
+  const art = $('mikoArt'), eyes = mikoInfo.eyes || [], mid = eyes.length ? eyes.reduce((a, e) => a + e.x, 0) / eyes.length : W / 2;
+  const pct = (v, of) => (v / of * 100) + '%';
+  mikoEyes = eyes.map((e) => {
+    const r = mikoInfo.eyeRadius || 20, toward = Math.sign(mid - e.x) || 1;
+    let d = [155, 105, 68, 255];
+    for (const k of [1.9, 2.4, 1.6]) { const p = fur.getImageData(clamp(Math.round(e.x + toward * r * k), 0, W - 1), clamp(Math.round(e.y - r * .5), 0, H - 1), 1, 1).data; if (p[3] > 220) { d = p; break; } }
+    const eye = el('i', 'eye', '<i class="pupil"></i><i class="glint"></i><i class="glint2"></i>');
+    Object.assign(eye.style, { left: pct(e.x, W), top: pct(e.y, H), width: pct(r * 2.15, W), height: pct(r * 2.15, H) });
+    const lid = el('i', 'lid'); Object.assign(lid.style, { left: pct(e.x, W), top: pct(e.y, H), width: pct(r * 2.5, W), height: pct(r * 2.5, H), background: `rgb(${d[0]},${d[1]},${d[2]})` });
+    const happy = el('i', 'happyEye'); Object.assign(happy.style, { left: pct(e.x, W), top: pct(e.y + r * .15, H), width: pct(r * 2, W), height: pct(r * 1.7, H) });
+    const blush = el('i', 'blush'); Object.assign(blush.style, { left: pct(e.x - toward * r * .3, W), top: pct(e.y + r * 2.1, H), width: pct(r * 2.3, W), height: pct(r * 1.2, H) });
+    art.append(eye, lid, happy, blush);
+    return { e, el: eye, r };
+  });
+}
+const mbox = $('peek');
+function peek(on) {
+  if (on) { mikoReady ||= loadMiko().catch(() => {}); mikoReady.then(() => document.body.classList.add('peeking')); }
+  else document.body.classList.remove('peeking');
+}
+$('peekBye').onclick = () => peek(false);
+function lookAt(x, y) {
+  const r = mbox.getBoundingClientRect();
+  if (!r.width) return;
+  mikoEyes.forEach(({ e, el: eye, r: er }) => {
+    const ex = r.left + e.x / mikoInfo.width * r.width, ey = r.top + e.y / mikoInfo.height * r.height;
+    const dx = x - ex, dy = y - ey, dist = Math.hypot(dx, dy) || 1, reach = Math.min(1, dist / 160), R = er / mikoInfo.width * r.width;
+    eye.style.setProperty('--px', (dx / dist * reach * R * .32).toFixed(1) + 'px'); eye.style.setProperty('--py', (dy / dist * reach * R * .28).toFixed(1) + 'px');
+    eye.style.setProperty('--gx', (dx / dist * reach * R * .5).toFixed(1) + 'px'); eye.style.setProperty('--gy', (dy / dist * reach * R * .42).toFixed(1) + 'px');
+  });
+  const tilt = clamp((x - (r.left + r.width * .6)) / r.width * 9, -6, 6), nod = clamp((y - (r.top + r.height * .3)) / r.height * 3, -3, 3);
+  $('mikoArt').style.transform = `rotate(${tilt.toFixed(2)}deg) translateY(${nod.toFixed(1)}px)`;
+}
+addEventListener('pointermove', (e) => { if (document.body.classList.contains('peeking')) lookAt(e.clientX, e.clientY); });
+(function blink() {
+  setTimeout(() => { if (document.body.classList.contains('peeking') && !mbox.classList.contains('happy')) { mbox.classList.add('blink'); setTimeout(() => mbox.classList.remove('blink'), 130); } blink(); }, 2200 + Math.random() * 3800);
+})();
+const rand = (a, b) => a + Math.random() * (b - a);
+function popAt(x, y, ids, n, spread) {
+  for (let i = 0; i < n; i++) {
+    const img = document.createElement('img'); img.src = STICKER_ART[ids[i % ids.length]].toDataURL(); img.className = 'pop';
+    Object.assign(img.style, { width: (20 + Math.random() * 22) + 'px', left: (x + rand(-spread, spread)) + 'px', top: (y + rand(-spread * .5, spread * .5)) + 'px', animationDelay: (i * .05) + 's' });
+    img.style.setProperty('--dx', rand(-50, 50) + 'px'); img.style.setProperty('--rot', rand(-30, 30) + 'deg');
+    document.body.append(img); setTimeout(() => img.remove(), 2200);
+  }
+}
+let petAt = 0, stroke = 0, lastP = null;
+function pet() {
+  const t = performance.now(); if (t - petAt < 600) return; petAt = t;
+  mbox.classList.remove('happy'); void mbox.offsetWidth; mbox.classList.add('happy');
+  clearTimeout(pet.t); pet.t = setTimeout(() => mbox.classList.remove('happy'), 1600);
+  const r = mbox.getBoundingClientRect(), top = Math.max(r.top + r.height * .25, 40);
+  popAt(r.left + r.width * .12, top, ['heart', 'heart', 'sparkle'], 6, 30);
+  popAt(r.left + r.width * .9, top, ['heart', 'star', 'sparkle'], 6, 30);
+}
+mbox.addEventListener('pointerdown', (e) => { pet(); lastP = [e.clientX, e.clientY]; });
+mbox.addEventListener('pointermove', (e) => {
+  if (lastP) stroke += Math.hypot(e.clientX - lastP[0], e.clientY - lastP[1]);
+  lastP = [e.clientX, e.clientY];
+  mbox.classList.add('pet'); clearTimeout(mbox.t_); mbox.t_ = setTimeout(() => mbox.classList.remove('pet'), 700);
+  if (stroke > 170) { stroke = 0; popAt(e.clientX, e.clientY - 10, ['heart'], 1, 6); }
+});
+mbox.addEventListener('pointerleave', () => { lastP = null; });
+mbox.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') pet(); });
+
+addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Escape') { if (document.body.classList.contains('listening')) listen(false); else if (document.body.classList.contains('signing')) openSheet(false); else peek(false); }
+  if (e.key === ' ' && document.body.classList.contains('listening')) { e.preventDefault(); togglePlay(); }
 });
 
 const viz = { an: null, spec: null, freq: new Uint8Array(512), t: 0, bass: 0, mid: 0, high: 0, kick: 0, avg: 0 };
@@ -621,6 +720,8 @@ function readSpectrum() {
   for (let k = 0; k < 256; k++) viz.freq[k] = F[a + k] + (F[b + k] - F[a + k]) * f;
 }
 
+
+
 const band = (a, b) => { let v = 0; for (let i = a; i < b; i++) v += viz.freq[i]; return v / (b - a) / 255; };
 // listen: lows, mids and highs, smoothed, plus a kick and a hi-hat detector
 function levels(t) {
@@ -638,6 +739,8 @@ function levels(t) {
   viz.hk = Math.max((viz.hk || 0) * .82, high > viz.hAvg * 1.22 && high > .1 ? 1 : 0);   // a hi-hat, a cymbal, a breath
 }
 
+
+
 /* ---------------- visitors ---------------- */
 const me = Math.random().toString(36).slice(2);
 async function ping() {
@@ -646,8 +749,9 @@ async function ping() {
     const sent = Date.now();
     const r = await rpc('ping', { p_id: me });
     clockSkew = r.now - (sent + Date.now()) / 2;   // trust the server's clock, not this device's
-    const others = r.peers - 1;
-    peersText = others > 0 ? `${others} ${others === 1 ? 'other' : 'others'} here` : '';
+    others = Math.max(0, r.peers - 1);                                   // the people here with you, right now
+    peersText = others ? `${words(Math.min(others, 99))} ${others === 1 ? 'other person is' : 'others are'} listening right now.` : '';
+    const pl = $('peersLine'); if (pl) { pl.textContent = peersText; pl.hidden = !others; pl.classList.add('on'); }
     tick();
   } catch {}
 }
@@ -655,6 +759,8 @@ if (online()) rpc('hit').then((count) => {
   // every visitor gets their own numbered copy
   $('serial').textContent = `no. ${String(count).padStart(7, '0')}`;
 }).catch(() => {});
+
+
 
 
 /* ---------------- the album: everyone paints, writes and sticks things on it ---------------- */
@@ -897,7 +1003,7 @@ $('delMark').onclick = removeSel;
 $('undo').onclick = () => { const m = mine.pop(); if (m === sel) sel = null; redraw(); updateTools(); };
 $('clear').onclick = () => { mine = []; sel = null; redraw(); updateTools(); };
 addEventListener('keydown', (e) => {
-  if (view !== 'canvas' || e.target.tagName === 'INPUT') return;
+  if (!document.body.classList.contains('signing') || e.target.tagName === 'INPUT') return;
   if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); $('undo').click(); }
   if ((e.key === 'Backspace' || e.key === 'Delete') && sel) { e.preventDefault(); removeSel(); }
 });
@@ -1073,535 +1179,11 @@ async function load() {
 
 
 
-/* ================================================================================================
-   the balcony
-   You stand on a balcony at night. In front: a glass railing in a black frame, split down the
-   middle, and across the street a corporate brick office where robots work late. To the right, a
-   canvas on an easel, side on; behind it the apartment wall and a glass door into a dim bedroom.
-   At your feet, Miko. Press play and the office gives way to the song; the balcony never changes.
-   Everything is in metres.
-   ================================================================================================ */
-const renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
-const scene = new THREE.Scene();
-scene.background = new THREE.Color('#05060a');
-const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, .03, 300);
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
-const BAL = { left: -2.6, right: 2.6, front: -1.6, back: 2.8, ceil: 2.75, rail: 1.12 };
 
-function canvasTexture(w, h, draw, repeat) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  draw(c.getContext('2d'), w, h);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(...repeat); }
-  return t;
-}
-const box = (w, h, d, mat, x, y, z, parent = scene) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); parent.add(m); return m; };
-const plane = (w, h, mat, x, y, z, ry = 0, rx = 0, parent = scene) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); m.position.set(x, y, z); m.rotation.set(rx, ry, 0); parent.add(m); return m; };
-const rand = (a, b) => a + Math.random() * (b - a);
-
-// the materials. The frame is black and unlit, so nothing (not even the song) ever changes it.
-const FRAME = new THREE.MeshBasicMaterial({ color: 0x0a0a0b });
-const GLASS = new THREE.MeshBasicMaterial({ color: 0xa8c8d0, transparent: true, opacity: .07, depthWrite: false, side: THREE.DoubleSide });
-const SHEEN = new THREE.MeshBasicMaterial({
-  transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: .55,
-  map: canvasTexture(256, 256, (g, w, h) => {                       // a few soft streaks of reflection
-    g.clearRect(0, 0, w, h);
-    for (const [x, s, a] of [[60, 34, .16], [118, 10, .1], [190, 22, .07]]) {
-      const gr = g.createLinearGradient(x - s, 0, x + s, 0);
-      gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(.5, `rgba(255,255,255,${a})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      g.save(); g.translate(w / 2, h / 2); g.rotate(-.5); g.translate(-w / 2, -h / 2); g.fillStyle = gr; g.fillRect(-w, -h, w * 3, h * 3); g.restore();
-    }
-  }),
-});
-const CONCRETE = new THREE.MeshStandardMaterial({
-  color: 0x9a9a9e, roughness: .93,
-  map: canvasTexture(512, 512, (g, w, h) => {
-    g.fillStyle = '#5b5b5f'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 9000; i++) { const v = 70 + Math.random() * 40 | 0; g.fillStyle = `rgba(${v},${v},${v + 3},.25)`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    g.strokeStyle = 'rgba(20,20,22,.55)'; g.lineWidth = 3;
-    for (let i = 0; i <= 2; i++) { g.beginPath(); g.moveTo(i * w / 2, 0); g.lineTo(i * w / 2, h); g.stroke(); g.beginPath(); g.moveTo(0, i * h / 2); g.lineTo(w, i * h / 2); g.stroke(); }
-  }, [4, 3.4]),
-});
-const WALL = new THREE.MeshStandardMaterial({ color: 0x47433f, roughness: .95 });
-const SLAB = new THREE.MeshStandardMaterial({ color: 0x2c2c2f, roughness: .95 });
-
-/* ---------- the light: night, a cool glow from the offices, warm lamplight from the bedroom door ---------- */
-scene.add(new THREE.HemisphereLight(0x7d8cb0, 0x1b1512, .55));
-const officeGlow = new THREE.DirectionalLight(0xe4ecff, .55); officeGlow.position.set(-2, 5, -20); scene.add(officeGlow);
-const spill = new THREE.PointLight(0xff9a52, 5, 7, 1.6); spill.position.set(3.3, 1.7, 1.0); scene.add(spill);
-
-/* ---------- the balcony ---------- */
-plane(BAL.right - BAL.left, BAL.back - BAL.front, CONCRETE, 0, 0, (BAL.front + BAL.back) / 2, 0, -Math.PI / 2);
-plane(BAL.right - BAL.left, BAL.back - BAL.front, SLAB, 0, BAL.ceil, (BAL.front + BAL.back) / 2, 0, Math.PI / 2);
-box(BAL.right - BAL.left + .4, .22, .25, SLAB, 0, BAL.ceil + .11, BAL.front - .1);              // the edge of the floor above
-box(BAL.right - BAL.left + .4, .25, .12, SLAB, 0, -.125, BAL.front - .06);                     // and of ours
-plane(BAL.back - BAL.front, BAL.ceil, WALL, BAL.left, BAL.ceil / 2, (BAL.front + BAL.back) / 2, Math.PI / 2);   // the wall to the left
-plane(BAL.right - BAL.left, BAL.ceil, WALL, 0, BAL.ceil / 2, BAL.back, Math.PI);                                // behind you
-
-// the railing: two big panes of glass in a black frame, split down the middle
-const R = BAL.rail, Z = BAL.front;
-for (const x of [BAL.left, 0, BAL.right]) box(.07, R, .07, FRAME, x, R / 2, Z);
-box(BAL.right - BAL.left + .07, .07, .09, FRAME, 0, R, Z);
-box(BAL.right - BAL.left + .07, .06, .07, FRAME, 0, .03, Z);
-const PANES = [];
-for (const cx of [(BAL.left + 0) / 2, (BAL.right + 0) / 2]) {
-  const w = (BAL.right - 0) - .07, h = R - .095;
-  PANES.push(plane(w, h, GLASS, cx, .06 + h / 2, Z));
-  plane(w, h, SHEEN, cx, .06 + h / 2, Z + .002);
-}
-
-// the apartment wall on the right, with a glass door into the bedroom
-const DOOR = { z0: -.2, z1: 2.3, top: 2.35 }, WX = BAL.right;
-box(.2, BAL.ceil, DOOR.z0 - BAL.front, WALL, WX + .1, BAL.ceil / 2, (BAL.front + DOOR.z0) / 2);
-box(.2, BAL.ceil, BAL.back - DOOR.z1, WALL, WX + .1, BAL.ceil / 2, (DOOR.z1 + BAL.back) / 2);
-box(.2, BAL.ceil - DOOR.top, DOOR.z1 - DOOR.z0, WALL, WX + .1, (BAL.ceil + DOOR.top) / 2, (DOOR.z0 + DOOR.z1) / 2);
-for (const z of [DOOR.z0, (DOOR.z0 + DOOR.z1) / 2, DOOR.z1]) box(.08, DOOR.top, .06, FRAME, WX, DOOR.top / 2, z);
-box(.08, .06, DOOR.z1 - DOOR.z0, FRAME, WX, DOOR.top, (DOOR.z0 + DOOR.z1) / 2);
-box(.08, .05, DOOR.z1 - DOOR.z0, FRAME, WX, .025, (DOOR.z0 + DOOR.z1) / 2);
-for (const k of [0, 1]) {
-  const w = (DOOR.z1 - DOOR.z0) / 2 - .06, cz = DOOR.z0 + (k + .5) * (DOOR.z1 - DOOR.z0) / 2;
-  plane(w, DOOR.top - .08, GLASS, WX, DOOR.top / 2, cz, -Math.PI / 2);
-  plane(w, DOOR.top - .08, SHEEN, WX - .002, DOOR.top / 2, cz, -Math.PI / 2);
-}
-
-/* ---------- the bedroom: dim, two lamps that answer each other, warm orange and teal ---------- */
-const ROOM = { x0: WX + .2, x1: WX + 3.4, z0: -.7, z1: 3.3, h: 2.7 };
-const roomMat = new THREE.MeshStandardMaterial({ color: 0x2e2629, roughness: .9, side: THREE.BackSide });
-box(ROOM.x1 - ROOM.x0, ROOM.h, ROOM.z1 - ROOM.z0, roomMat, (ROOM.x0 + ROOM.x1) / 2, ROOM.h / 2, (ROOM.z0 + ROOM.z1) / 2);
-plane(ROOM.x1 - ROOM.x0, ROOM.z1 - ROOM.z0, new THREE.MeshStandardMaterial({
-  roughness: .7, map: canvasTexture(512, 512, (g, w, h) => {
-    for (let i = 0; i < 8; i++) { g.fillStyle = `hsl(24 ${30 + Math.random() * 8}% ${16 + Math.random() * 5}%)`; g.fillRect(0, i * h / 8, w, h / 8 - 2); }
-    g.fillStyle = 'rgba(0,0,0,.4)'; for (let i = 0; i < 8; i++) g.fillRect(0, i * h / 8 - 2, w, 2);
-  }, [2, 2]),
-}), (ROOM.x0 + ROOM.x1) / 2, .002, (ROOM.z0 + ROOM.z1) / 2, 0, -Math.PI / 2);
-const bedZ = 1.15, bedX = ROOM.x1 - 1.05;
-const wood = new THREE.MeshStandardMaterial({ color: 0x3b2a20, roughness: .8 });
-box(2.05, .32, 1.62, wood, bedX, .16, bedZ);
-box(1.98, .22, 1.56, new THREE.MeshStandardMaterial({ color: 0xd6d0c6, roughness: .95 }), bedX, .43, bedZ);
-box(1.45, .1, 1.6, new THREE.MeshStandardMaterial({ color: 0x2c3240, roughness: .95 }), bedX - .27, .55, bedZ);
-for (const dz of [-.38, .38]) box(.42, .13, .62, new THREE.MeshStandardMaterial({ color: 0xebe6dc, roughness: 1 }), ROOM.x1 - .3, .6, bedZ + dz);
-box(.08, 1.05, 1.7, wood, ROOM.x1 - .06, .6, bedZ);
-// make it cozy: a soft upholstered headboard, more pillows, a knitted throw, a rug, warm string lights
-const soft = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 1 });
-const roundBox = (w, h, d, mat, x, y, z, r = .06) => {                 // a pillow-ish box with softened corners
-  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, 1, 6, 12), mat);
-  m.scale.set(w / (2 * r), h / (1 + 2 * r), d / (2 * r)); m.rotation.z = Math.PI / 2; m.position.set(x, y, z); scene.add(m); return m;
-};
-box(.14, 1.15, 1.75, soft(0x6b5a4e), ROOM.x1 - .14, .82, bedZ);
-for (const [dz, c, h] of [[-.42, 0xefe9de, .2], [.42, 0xefe9de, .2], [-.3, 0xc9a27e, .16], [.3, 0x8f6f8a, .16]]) {
-  const p_ = roundBox(.18, h * 1.4, .58, soft(c), ROOM.x1 - (h > .18 ? .32 : .5), .66 + (h > .18 ? 0 : .02), bedZ + dz * (h > .18 ? 1 : .9), .09);
-  p_.rotation.x = .25;
-}
-const throwBlanket = box(.75, .05, 1.72, soft(0xb5653f), bedX - .55, .62, bedZ); throwBlanket.rotation.z = -.04;
-box(.04, .4, 1.7, soft(0xa65a36), bedX - 1.0, .45, bedZ);                         // the throw hanging over the foot of the bed
-plane(2.6, 2.4, new THREE.MeshStandardMaterial({ roughness: 1, map: canvasTexture(256, 256, (g, w, h) => {
-  g.fillStyle = '#4a3328'; g.fillRect(0, 0, w, h);
-  for (let i = 0; i < 6; i++) { g.strokeStyle = i % 2 ? '#7a5640' : '#d8b48a'; g.lineWidth = 6; g.strokeRect(12 + i * 14, 12 + i * 14, w - 24 - i * 28, h - 24 - i * 28); }
-  for (let i = 0; i < 3000; i++) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-}) }), bedX - .6, .006, bedZ, 0, -Math.PI / 2);
-const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(.025, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc27a, toneMapped: false }), 34);
-for (let i = 0; i < 34; i++) {                                                     // fairy lights draped along the wall above the bed
-  const t = i / 33, z = ROOM.z0 + .25 + t * (ROOM.z1 - ROOM.z0 - .5), y = 2.15 - Math.sin(t * Math.PI * 3) ** 2 * .22;
-  bulbs.setMatrixAt(i, new THREE.Matrix4().setPosition(ROOM.x1 - .04, y, z));
-}
-scene.add(bulbs);
-const fairy = new THREE.PointLight(0xffb36b, 2.2, 4, 1.6); fairy.position.set(ROOM.x1 - .4, 2.0, bedZ); scene.add(fairy);
-plane(1.4, .9, new THREE.MeshStandardMaterial({                                   // a print over the bed
-  roughness: .9, map: canvasTexture(256, 160, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#2a1b3d'); gr.addColorStop(.6, '#c2553a'); gr.addColorStop(1, '#f2b46b');
-    g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = '#f6d9a4'; g.beginPath(); g.arc(w / 2, h * .62, 26, 0, 7); g.fill();
-    g.fillStyle = '#1a1220'; g.fillRect(0, h * .78, w, h); g.strokeStyle = '#111'; g.lineWidth = 10; g.strokeRect(0, 0, w, h);
-  }),
-}), ROOM.x1 - .01, 1.65, bedZ, -Math.PI / 2);
-const LAMPS = [];
-for (const [dz, col] of [[-1.0, 0xff7a2e], [1.0, 0x2ed3c6]]) {
-  const z = bedZ + dz;
-  box(.5, .5, .44, wood, ROOM.x1 - .3, .25, z);
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(.05, .08, .32, 16), new THREE.MeshStandardMaterial({ color: 0x1b1b1d, roughness: .4 }));
-  base.position.set(ROOM.x1 - .3, .66, z); scene.add(base);
-  const shade = new THREE.Mesh(new THREE.CylinderGeometry(.15, .21, .28, 28, 1, true),
-    new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 3.2, side: THREE.DoubleSide, roughness: .8 }));
-  shade.position.set(ROOM.x1 - .3, .94, z); scene.add(shade);
-  const light = new THREE.PointLight(col, 9, 7, 1.5); light.position.set(ROOM.x1 - .35, .95, z); scene.add(light);
-  LAMPS.push({ shade, light, base: light.intensity });
-}
-
-/* ---------- the canvas on its easel, side on to you ---------- */
-const CANVAS_AT = V(1.22, 1.22, -.95), CANVAS_SIZE = .8;
-const FACING = V(-.9, 0, -.44).normalize();                    // the way the canvas faces
-const easel = new THREE.Group();
-easel.position.set(CANVAS_AT.x, 0, CANVAS_AT.z);
-easel.rotation.y = Math.atan2(FACING.x, FACING.z);
-scene.add(easel);
-const albumCanvas = document.createElement('canvas'); albumCanvas.width = albumCanvas.height = 1024;
-const albumTex = new THREE.CanvasTexture(albumCanvas); albumTex.colorSpace = THREE.SRGBColorSpace; albumTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-const linen = new THREE.MeshStandardMaterial({ color: 0xe9e3d6, roughness: .95 });
-const board = new THREE.Mesh(new THREE.BoxGeometry(CANVAS_SIZE, CANVAS_SIZE, .035),
-  [linen, linen, linen, linen, new THREE.MeshBasicMaterial({ map: albumTex, color: 0xeeeeee, toneMapped: false }), linen]);
-board.position.set(0, CANVAS_AT.y, 0); easel.add(board);
-const easelWood = new THREE.MeshStandardMaterial({ color: 0x7a5434, roughness: .75 });
-const leg = (x, z, tilt, roll) => { const m = box(.035, 1.95, .035, easelWood, x, .95, z, easel); m.rotation.set(tilt, 0, roll); return m; };
-leg(-.3, -.05, .06, .12); leg(.3, -.05, .06, -.12); leg(0, -.5, -.3, 0);      // behind the canvas
-box(.92, .04, .1, easelWood, 0, CANVAS_AT.y - CANVAS_SIZE / 2 - .03, .06, easel);
-box(.14, .05, .07, easelWood, 0, CANVAS_AT.y + CANVAS_SIZE / 2 + .02, .03, easel);
-
-/* ---------- miko, at your feet ---------- */
-const MIKO_AT = V(.12, .33, .05), MIKO_W = .8;
-const mikoMat = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: .04, toneMapped: false, depthWrite: false });
-const mikoMesh = new THREE.Mesh(new THREE.PlaneGeometry(MIKO_W, MIKO_W * 816 / 900), mikoMat);
-mikoMesh.position.copy(MIKO_AT); scene.add(mikoMesh);
-const mikoShadow = plane(.8, .34, new THREE.MeshBasicMaterial({
-  transparent: true, depthWrite: false, toneMapped: false,
-  map: canvasTexture(128, 64, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }),
-}), MIKO_AT.x, .004, MIKO_AT.z + .02, 0, -Math.PI / 2);
-// a digital Miko: the photo, cut out, pixelated a little, with a soft glow
-let mikoInfo = { width: 900, height: 816, eyes: [], nose: null, eyeRadius: 20 }, mikoURL = '', mikoEyes = [];
-async function loadMiko() {
-  try { mikoInfo = await (await fetch('img/miko.json')).json(); } catch {}
-  const img = new Image(); img.src = 'img/miko.png'; await img.decode();
-  const W = img.naturalWidth, H = img.naturalHeight, px = 3;
-  const small = document.createElement('canvas'); small.width = Math.round(W / px); small.height = Math.round(H / px);
-  small.getContext('2d').drawImage(img, 0, 0, small.width, small.height);
-  const big = document.createElement('canvas'); big.width = W; big.height = H;
-  const g = big.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(small, 0, 0, W, H);
-  mikoURL = big.toDataURL('image/png');
-  const tex = new THREE.CanvasTexture(big); tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter;
-  mikoMat.map = tex; mikoMat.needsUpdate = true;
-  mikoMesh.geometry.dispose(); mikoMesh.geometry = new THREE.PlaneGeometry(MIKO_W, MIKO_W * H / W);
-  $('mikoImg').src = mikoURL;
-  // her eyes, rebuilt so they can look at you; lids the colour of her fur for blinking and smiling
-  const fur = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-  fur.canvas.width = W; fur.canvas.height = H; fur.drawImage(img, 0, 0);
-  const art = $('mikoArt'), eyes = mikoInfo.eyes || [], mid = eyes.length ? eyes.reduce((s_, e) => s_ + e.x, 0) / eyes.length : W / 2;
-  const pct = (v, of) => (v / of * 100) + '%';
-  mikoEyes = eyes.map((e, i) => {
-    const r = mikoInfo.eyeRadius || 20, toward = Math.sign(mid - e.x) || 1;
-    let d = [155, 105, 68, 255];                                        // her tan, if the photo has nothing there
-    for (const k of [1.9, 2.4, 1.6]) { const p_ = fur.getImageData(clamp(Math.round(e.x + toward * r * k), 0, W - 1), clamp(Math.round(e.y - r * .5), 0, H - 1), 1, 1).data; if (p_[3] > 220) { d = p_; break; } }
-    const furC = `rgb(${d[0]},${d[1]},${d[2]})`;
-    const eye = document.createElement('i'); eye.className = 'eye';
-    eye.innerHTML = '<i class="pupil"></i><i class="glint"></i><i class="glint2"></i>';
-    Object.assign(eye.style, { left: pct(e.x, W), top: pct(e.y, H), width: pct(r * 2.15, W), height: pct(r * 2.15, H) });
-    const lid = document.createElement('i'); lid.className = 'lid';
-    Object.assign(lid.style, { left: pct(e.x, W), top: pct(e.y - r * 1.2, H), width: pct(r * 2.5, W), height: pct(r * 2.5, H), background: furC, transformOrigin: '50% 0' });
-    lid.style.top = pct(e.y, H);
-    const happy = document.createElement('i'); happy.className = 'happyEye';
-    Object.assign(happy.style, { left: pct(e.x, W), top: pct(e.y + r * .15, H), width: pct(r * 2, W), height: pct(r * 1.7, H) });
-    const blush = document.createElement('i'); blush.className = 'blush';
-    Object.assign(blush.style, { left: pct(e.x - toward * r * .3, W), top: pct(e.y + r * 2.1, H), width: pct(r * 2.3, W), height: pct(r * 1.2, H) });
-    art.append(eye, lid, happy, blush);
-    return { e, el: eye, r };
-  });
-}
-
-/* ---------- the office across the street ----------
-   One narrow one-way street away. Night: white floodlights wash the brick from the sidewalk.
-   Every floor is a real, hollow office you can see into: fluorescent ceilings, grey cubicles,
-   and robots working late. */
-const ST = { face: -10.5, depth: 7.2, floorH: 3.6, base: -11, floors: 7, x0: -15.5, x1: 16.5, bay: 3 };
-const floorY = (k) => ST.base + k * ST.floorH;          // the top of each floor's slab
-const FAC = { z: ST.face };
-const tmpM0 = new THREE.Matrix4();
-const brickTex = canvasTexture(512, 512, (g, w, h) => {
-  g.fillStyle = '#3a2420'; g.fillRect(0, 0, w, h);
-  const bw = 72, bh = 24;
-  for (let r = 0; r * bh < h; r++) for (let c = -1; c * bw < w; c++) {
-    const x = c * bw + (r % 2 ? bw / 2 : 0) + 2, y = r * bh + 2;
-    g.fillStyle = `hsl(${9 + Math.random() * 10} ${30 + Math.random() * 14}% ${24 + Math.random() * 10}%)`; g.fillRect(x, y, bw - 4, bh - 4);
-    g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(x, y + bh - 7, bw - 4, 3);
-  }
-}, [1, 1]);
-const brick = new THREE.MeshStandardMaterial({ map: brickTex, roughness: .9, color: 0xffffff });
-const concrete2 = new THREE.MeshStandardMaterial({ color: 0x8d8780, roughness: .85 });
-const alu = new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: .5, metalness: .4 });
-// a box whose brick is the real size, however big the box
-function brickBox(w, h, d, x, y, z) {
-  const geo = new THREE.BoxGeometry(w, h, d), uv = geo.attributes.uv, n = geo.attributes.normal;
-  for (let i = 0; i < uv.count; i++) {
-    const side = Math.abs(n.getX(i)) > .5 ? d : w;
-    uv.setXY(i, uv.getX(i) * side / 1.4, uv.getY(i) * (Math.abs(n.getY(i)) > .5 ? d : h) / 1.4);
-  }
-  const m = new THREE.Mesh(geo, brick); m.position.set(x, y, z); scene.add(m); return m;
-}
-const W_ = ST.x1 - ST.x0, CX = (ST.x0 + ST.x1) / 2, TOP = floorY(ST.floors);
-// piers between the windows, bands between the floors
-for (let x = ST.x0; x <= ST.x1 + .01; x += ST.bay) brickBox(.7, TOP - ST.base + 1, .55, x, (ST.base + TOP) / 2, ST.face + .12);
-for (let k = 0; k <= ST.floors; k++) {
-  brickBox(W_ + .7, 1.45, .45, CX, floorY(k) + .275, ST.face);
-  box(W_ + .9, .12, .62, concrete2, CX, floorY(k) + 1.0, ST.face + .14);                                 // a stone sill
-}
-// the windows: aluminium mullions, a little glass
-for (let k = 0; k < ST.floors; k++) {
-  const y0 = floorY(k) + 1, y1 = floorY(k) + 3.15;
-  for (let x = ST.x0 + ST.bay / 2; x < ST.x1; x += ST.bay) box(.06, y1 - y0, .08, alu, x, (y0 + y1) / 2, ST.face - .05);
-  box(W_, .07, .08, alu, CX, y1 - .62, ST.face - .05);
-  plane(W_, y1 - y0, new THREE.MeshBasicMaterial({ color: 0xbfd2d8, transparent: true, opacity: .1, depthWrite: false }), CX, (y0 + y1) / 2, ST.face - .08);
-}
-// the street below: asphalt, a painted line, the far sidewalk
-plane(W_ + 10, ST.face - BAL.front + 2, new THREE.MeshStandardMaterial({ color: 0x17181b, roughness: .95 }), CX, ST.base, (ST.face + BAL.front) / 2, 0, -Math.PI / 2);
-// floodlights on the sidewalk, washing the brick white from below
-for (const x of [-12, -6, 0, 6, 12]) {
-  const s = new THREE.SpotLight(0xf4f7ff, 950, 46, .5, .8, 1.3);
-  s.position.set(x, ST.base + .4, ST.face + 1.6); s.target.position.set(x, ST.base + 22, ST.face); scene.add(s, s.target);
-  box(.35, .22, .3, alu, x, ST.base + .15, ST.face + 1.6);
-  box(.3, .02, .22, new THREE.MeshBasicMaterial({ color: 0xffffff }), x, ST.base + .27, ST.face + 1.6);
-}
-scene.add(new THREE.HemisphereLight(0x9aa6c0, 0x241a16, .35));
-
-// inside each floor: one deep open-plan office, lit like a hospital
-const officeTex = {
-  ceiling: canvasTexture(512, 256, (g, w, h) => {                       // the grid of fluorescent panels
-    g.fillStyle = '#d9ddda'; g.fillRect(0, 0, w, h);
-    g.strokeStyle = '#b9bdb9'; g.lineWidth = 2; for (let x = 0; x < w; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
-    g.fillStyle = '#ffffff'; for (let x = 16; x < w; x += 128) for (let y = 40; y < h; y += 96) { g.shadowColor = '#fff'; g.shadowBlur = 14; g.fillRect(x, y, 64, 30); }
-  }, [W_ / 8, 1]),
-  floor: canvasTexture(256, 256, (g, w, h) => {
-    g.fillStyle = '#5f666d'; g.fillRect(0, 0, w, h);
-    for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(${Math.random() < .5 ? '0,0,0' : '255,255,255'},.05)`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
-    g.strokeStyle = 'rgba(0,0,0,.15)'; g.strokeRect(0, 0, w, h);
-  }, [W_ / 2, ST.depth / 2]),
-  back: canvasTexture(1024, 128, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#e9ebe6'); gr.addColorStop(1, '#bfc3bf'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-    for (let x = 30; x < w; x += 140 + Math.random() * 120) {
-      const k = Math.random();
-      if (k < .3) { g.fillStyle = '#f7f7f4'; g.fillRect(x, 22, 70, 42); g.strokeStyle = '#8c9094'; g.strokeRect(x, 22, 70, 42); }      // a whiteboard
-      else if (k < .55) { g.fillStyle = '#8a9096'; g.fillRect(x, 30, 26, 98); g.fillStyle = '#c8ccd0'; g.fillRect(x + 20, 76, 3, 6); }   // a door
-      else if (k < .75) { g.fillStyle = '#2f3a44'; g.fillRect(x, 30, 40, 30); }                                                    // a framed print
-      else { g.fillStyle = '#9da3a8'; g.fillRect(x, 70, 30, 58); }                                                                 // a filing cabinet
-    }
-  }),
-};
-const wallMat = new THREE.MeshBasicMaterial({ map: officeTex.back, toneMapped: false });
-const ceilMat = new THREE.MeshBasicMaterial({ map: officeTex.ceiling, toneMapped: false });
-const carpetMat = new THREE.MeshBasicMaterial({ map: officeTex.floor, toneMapped: false, color: 0xcfd3d6 });
-const sideMat = new THREE.MeshBasicMaterial({ color: 0xc9ccc8, toneMapped: false });
-const fabric = new THREE.MeshBasicMaterial({ toneMapped: false, map: canvasTexture(64, 64, (g, w, h) => {   // cubicle walls: grey fabric, a metal trim on top
-  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#a7adb2'); gr.addColorStop(1, '#6f767c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
-  g.fillStyle = '#d4d8db'; g.fillRect(0, 0, w, 5);
-}) });
-const CUBE_W = 1.8, ROWS = [ST.face - 2.0, ST.face - 4.6];
-const panels = [];
-for (let k = 0; k < ST.floors; k++) {
-  const y = floorY(k), z0 = ST.face - .3, z1 = z0 - ST.depth, H = ST.floorH - .25;
-  plane(W_, ST.depth, carpetMat, CX, y + .01, (z0 + z1) / 2, 0, -Math.PI / 2);
-  plane(W_, ST.depth, ceilMat, CX, y + H, (z0 + z1) / 2, 0, Math.PI / 2);
-  plane(W_, H, wallMat, CX, y + H / 2, z1);
-  plane(ST.depth, H, sideMat, ST.x0 - .2, y + H / 2, (z0 + z1) / 2, Math.PI / 2);
-  plane(ST.depth, H, sideMat, ST.x1 + .2, y + H / 2, (z0 + z1) / 2, -Math.PI / 2);
-  for (const rz of ROWS) for (let x = ST.x0 + 1; x < ST.x1 - 1; x += CUBE_W) {
-    panels.push([x + CUBE_W / 2, y + .5, rz + .75, CUBE_W - .04, 1.0, .06]);                 // the front wall of the cubicle
-    panels.push([x, y + .5, rz, .06, 1.0, 1.5]);                                             // the divider
-  }
-}
-const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
-const cubes = new THREE.InstancedMesh(cubeGeo, fabric, panels.length);
-panels.forEach(([x, y, z, w, h, d], i) => cubes.setMatrixAt(i, tmpM0.compose(V(x, y, z), new THREE.Quaternion(), V(w, h, d))));
-scene.add(cubes);
-
-// the robots: one sprite sheet, eight poses, every worker an instance of it
-const ROBOT = 1.75;
-
-const robotSheet = canvasTexture(1024, 128, (g) => {
-  const body = '#dde1e4', joint = '#7b848b', visor = '#1b2228', eye = '#62f3ff', desk = '#b7bcc0', deskDark = '#868c91';
-  const rr = (x, y, w, h, r, c) => { g.fillStyle = c; g.beginPath(); g.roundRect(x, y, w, h, r); g.fill(); };
-  const limb = (pts, w, c) => { g.strokeStyle = c; g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke(); };
-  const head = (ox, x, y, front) => {
-    limb([[ox + x + 12, y], [ox + x + 12, y - 8]], 2, joint); g.fillStyle = '#ff5050'; g.beginPath(); g.arc(ox + x + 12, y - 9, 2.5, 0, 7); g.fill();
-    rr(ox + x, y, 30, 24, 7, body);
-    if (front) { rr(ox + x + 3, y + 7, 24, 9, 4, visor); g.fillStyle = eye; g.fillRect(ox + x + 8, y + 10, 4, 3); g.fillRect(ox + x + 18, y + 10, 4, 3); }
-    else { rr(ox + x + 16, y + 6, 15, 10, 4, visor); g.fillStyle = eye; g.fillRect(ox + x + 24, y + 9, 5, 3); }
-  };
-  for (let f = 0; f < 8; f++) {
-    const ox = f * 128;
-    if (f === 4 || f === 5) {                                          // walking, side on
-      const s = f === 4 ? 1 : -1;
-      limb([[ox + 58, 84], [ox + 58 + 8 * s, 104], [ox + 58 + 12 * s, 124]], 7, joint);
-      limb([[ox + 62, 84], [ox + 62 - 8 * s, 104], [ox + 62 - 12 * s, 124]], 7, '#9aa2a8');
-      rr(ox + 46, 44, 30, 44, 8, body); head(ox, 46, 16, false);
-      limb([[ox + 62, 52], [ox + 62 - 10 * s, 70], [ox + 62 - 14 * s, 84]], 6, joint);
-      continue;
-    }
-    rr(ox + 20, 46, 8, 34, 3, '#2b2f33'); rr(ox + 20, 74, 30, 7, 3, '#2b2f33'); limb([[ox + 34, 81], [ox + 34, 124]], 4, '#2b2f33');   // the chair
-    rr(ox + 28, 42, 28, 36, 8, body);                                                                                                   // the body, sitting
-    limb([[ox + 44, 78], [ox + 66, 80], [ox + 68, 112]], 7, joint);                                                                     // the legs, under the desk
-    head(ox, 28, 14, f === 2);
-    g.fillStyle = desk; g.fillRect(ox + 56, 70, 70, 6); g.fillStyle = deskDark; g.fillRect(ox + 116, 76, 6, 52); g.fillRect(ox + 58, 76, 4, 52);   // the desk
-    g.fillStyle = '#2a2e33'; g.fillRect(ox + 104, 44, 5, 26); g.fillRect(ox + 98, 66, 18, 4);                                           // the monitor, side on
-    g.fillStyle = '#5c8fd6'; g.fillRect(ox + 101, 44, 3, 22);
-    g.fillStyle = '#3a3f45'; g.fillRect(ox + 70, 67, 20, 3);                                                                           // keyboard
-    if (f === 0) limb([[ox + 46, 50], [ox + 60, 62], [ox + 74, 66]], 6, joint);
-    if (f === 1) limb([[ox + 46, 50], [ox + 62, 60], [ox + 80, 65]], 6, joint);
-    if (f === 2) limb([[ox + 46, 50], [ox + 58, 64], [ox + 72, 66]], 6, joint);
-    if (f === 3) { limb([[ox + 46, 50], [ox + 62, 52], [ox + 60, 34]], 6, joint); rr(ox + 55, 26, 10, 12, 2, '#f2efe8'); }                 // coffee
-    if (f === 6) { limb([[ox + 44, 50], [ox + 56, 46], [ox + 56, 30]], 6, joint); rr(ox + 53, 22, 6, 14, 2, '#222'); }                     // on the phone
-    if (f === 7) { limb([[ox + 40, 46], [ox + 34, 26], [ox + 38, 6]], 6, joint); limb([[ox + 48, 46], [ox + 56, 26], [ox + 52, 6]], 6, joint); }   // stretching
-  }
-});
-const robotGeo = new THREE.PlaneGeometry(ROBOT, ROBOT);
-const robotMat = new THREE.ShaderMaterial({
-  transparent: true, depthWrite: false,
-  uniforms: { map: { value: robotSheet }, uOpacity: { value: 1 } },
-  vertexShader: `attribute float aFrame; varying vec2 vUv;
-    void main() { vUv = vec2((uv.x + aFrame) / 8.0, uv.y); gl_Position = projectionMatrix * modelViewMatrix * instanceMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `uniform sampler2D map; uniform float uOpacity; varying vec2 vUv;
-    void main() { vec4 c = texture2D(map, vUv); if (c.a < .5) discard; gl_FragColor = vec4(c.rgb * .9, c.a * uOpacity);
-    #include <colorspace_fragment>
-    }`,
-});
-// one at almost every desk, a couple wandering the aisle on each floor
-const workers = [];
-for (let k = 0; k < ST.floors; k++) {
-  for (const rz of ROWS) for (let x = ST.x0 + 1; x < ST.x1 - 1; x += CUBE_W)
-    if (Math.random() < .72) workers.push({ walker: false, x: x + CUBE_W * .5, y: floorY(k) + ROBOT / 2, z: rz + .1, frame: Math.random() < .5 ? 0 : 1, hold: 0 });
-  for (let n = 0; n < 2; n++) workers.push({ walker: true, x0: ST.x0 + 1, x1: ST.x1 - 1, x: rand(ST.x0 + 1, ST.x1 - 1), y: floorY(k) + ROBOT / 2, z: ST.face - 3.3, dir: Math.random() < .5 ? -1 : 1, frame: 4, hold: 0 });
-}
-robotGeo.setAttribute('aFrame', new THREE.InstancedBufferAttribute(new Float32Array(workers.length), 1));
-const robots = new THREE.InstancedMesh(robotGeo, robotMat, workers.length);
-scene.add(robots);
-const tmpM = new THREE.Matrix4();
-function stepRobots() {
-  const frames = robotGeo.attributes.aFrame.array;
-  workers.forEach((w, i) => {
-    if (w.walker) {
-      w.frame = w.frame === 4 ? 5 : 4; w.x += w.dir * .16;
-      if (w.x > w.x1 || w.x < w.x0) { w.dir *= -1; w.x = clamp(w.x, w.x0, w.x1); }
-    } else if (w.hold > 0) w.hold--;
-    else if (Math.random() < .015) { w.frame = [2, 3, 6, 7][Math.floor(Math.random() * 4)]; w.hold = 10 + Math.floor(Math.random() * 30); }
-    else w.frame = w.frame === 0 ? 1 : 0;                                // typing
-    frames[i] = w.frame;
-    tmpM.makeScale(w.walker ? w.dir : 1, 1, 1).setPosition(w.x, w.y, w.z);
-    robots.setMatrixAt(i, tmpM);
-  });
-  robotGeo.attributes.aFrame.needsUpdate = true;
-  robots.instanceMatrix.needsUpdate = true;
-}
-stepRobots();
-
-/* ---------- the song: the office gives way to the world, hyper-saturated, switching on its own ---------- */
-// Clips are licensed footage (see video/credits.json); between them, patterns made right here.
-const tripMat = new THREE.ShaderMaterial({
-  transparent: true, depthWrite: false,
-  uniforms: {
-    tA: { value: null }, tB: { value: null }, kindA: { value: 1 }, kindB: { value: 2 }, aspA: { value: 1.78 }, aspB: { value: 1.78 },
-    mirA: { value: 0 }, mirB: { value: 0 }, mixAB: { value: 0 }, uTime: { value: 0 }, uBass: { value: 0 }, uHigh: { value: 0 }, uKick: { value: 0 }, uOpacity: { value: 0 }, PLANE: { value: 1.5 },
-  },
-  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
-  fragmentShader: `
-    uniform sampler2D tA, tB; uniform float kindA, kindB, aspA, aspB, mirA, mirB, mixAB, uTime, uBass, uHigh, uKick, uOpacity, PLANE;
-    varying vec2 vUv;
-    vec3 hue(vec3 c, float a) { const vec3 k = vec3(.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1. - ca); }
-    vec3 pattern(float k, vec2 p, float t) {
-      p -= .5; p.x *= PLANE;
-      if (k < 1.5) { float v = sin(p.x * 9. + t) + sin(p.y * 7. - t * 1.3) + sin((p.x + p.y) * 6. + t * .7) + sin(length(p) * 14. - t * 2. - uBass * 4.);
-                     return .5 + .5 * cos(vec3(0., 2.1, 4.2) + v * 1.7 + t * .5); }
-      if (k < 2.5) { float r = length(p) + .001, a = atan(p.y, p.x);
-                     float v = sin(3. / r - t * 4. - uBass * 5.) * .5 + .5, s = sin(a * 6. + t + 2. / r) * .5 + .5;
-                     return (.5 + .5 * cos(vec3(0., 2., 4.) + v * 3. + s * 2. + t)) * smoothstep(0., .08, r); }
-      if (k < 3.5) { float r = length(p), a = atan(p.y, p.x); a = abs(mod(a + t * .1, .7854) - .3927);
-                     vec2 q = vec2(cos(a), sin(a)) * r; float v = sin(q.x * 34. - t * 3.) * sin(q.y * 34. + t * 2.);
-                     return .5 + .5 * cos(vec3(1., 3., 5.) + v * 2.2 + r * 7. - t); }
-      vec2 q = p * (7. + 3. * sin(t * .3)); q += sin(q.yx * 1.3 + t) * .7;
-      return mix(vec3(1., .1, .65), vec3(.1, 1., .85), step(0., sin(q.x) * sin(q.y))) * (.65 + .35 * sin(t * 2. + length(p) * 9.));
-    }
-    vec2 cover(vec2 uv, float asp) {
-      if (asp > PLANE) uv.x = (uv.x - .5) * PLANE / asp + .5; else uv.y = (uv.y - .5) * asp / PLANE + .5;
-      return uv;
-    }
-    vec3 layer(sampler2D tex, float kind, float asp, float mir, vec2 uv) {
-      if (mir > .5) uv.x = .5 + abs(uv.x - .5);
-      if (kind > .5) return pattern(kind, uv, uTime);
-      vec2 w = uv + vec2(sin(uv.y * 14. + uTime * 2.), cos(uv.x * 11. + uTime * 1.7)) * .005 * (1. + uBass * 4.);
-      vec2 c = cover(w, asp); float ca = .003 + uKick * .012;
-      return vec3(texture2D(tex, c + vec2(ca, 0.)).r, texture2D(tex, c).g, texture2D(tex, c - vec2(ca, 0.)).b);
-    }
-    void main() {
-      vec3 c = mix(layer(tA, kindA, aspA, mirA, vUv), layer(tB, kindB, aspB, mirB, vUv), mixAB);
-      float l = dot(c, vec3(.299, .587, .114));
-      c = mix(vec3(l), c, 2.5 + uBass * 1.4);                                   // hyper-saturated
-      c = hue(c, uTime * .22 + uBass * 1.6 + vUv.y * .9 + vUv.x * .4);           // the colours drift, and lurch on the bass
-      c = (c - .5) * (1.22 + uKick * .3) + .5 + uKick * .1;
-      gl_FragColor = vec4(clamp(c, 0., 1.), uOpacity);
-      #include <colorspace_fragment>
-    }`,
-});
-const tripPlane = plane(1, 1, tripMat, 0, 0, FAC.z + .5);
-// sized to exactly what you can see from the balcony, so the footage isn't blown up
-function fitTrip() {
-  const p = viewPose('main'), d = p.pos.z - tripPlane.position.z, th = Math.tan(p.fov * Math.PI / 360);
-  const h = 2 * d * th * 1.12, w = h * Math.max(innerWidth / innerHeight, 1) * 1.12;
-  tripPlane.scale.set(w, h, 1);
-  tripPlane.position.set(p.pos.x, p.pos.y + (p.look.y - p.pos.y) / (p.look.z - p.pos.z) * (tripPlane.position.z - p.pos.z), tripPlane.position.z);
-  tripMat.uniforms.PLANE.value = w / h;
-}
-tripPlane.renderOrder = 2;
-
-const trip = { on: false, level: 0, clips: [], cur: { kind: 1 }, next: null, fade: 0, fadeDur: .5, switchAt: 0, last: -1 };
-fetch('video/credits.json').then((r) => r.json()).then((list) => { trip.clips = list.map((c) => ({ ...c, el: null, tex: null, ready: false, asp: 16 / 9 })); }).catch(() => {});
-function loadClip(c) {
-  if (c.el) return;
-  const el = c.el = document.createElement('video');
-  el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto';
-  el.setAttribute('playsinline', ''); el.setAttribute('muted', '');
-  el.addEventListener('loadedmetadata', () => { if (el.videoHeight) c.asp = el.videoWidth / el.videoHeight; });
-  el.addEventListener('canplay', () => { c.ready = true; }, { once: true });
-  el.src = 'video/' + c.file;
-  c.tex = new THREE.VideoTexture(el); c.tex.colorSpace = THREE.SRGBColorSpace;
-}
-function tripOn(on) {
-  trip.on = on;
-  if (on && !OLD_LOOK[playingIdx]) { [...trip.clips].sort(() => Math.random() - .5).slice(0, 2).forEach(loadClip); trip.switchAt = viz.t + rand(2.5, 4); }
-}
-function chooseNext() {
-  const ready = trip.clips.filter((c, i) => c.ready && i !== trip.last && c !== trip.cur.clip);
-  const unloaded = trip.clips.filter((c) => !c.el);
-  if (unloaded.length) loadClip(unloaded[Math.floor(Math.random() * unloaded.length)]);
-  if (ready.length && Math.random() < .72) {
-    const clip = ready[Math.floor(Math.random() * ready.length)];
-    trip.last = trip.clips.indexOf(clip);
-    return { kind: 0, clip, mir: Math.random() < .3 ? 1 : 0 };
-  }
-  let k; do { k = 1 + Math.floor(Math.random() * 4); } while (k === trip.cur.kind);
-  return { kind: k, mir: 0 };
-}
-function setLayer(which, s) {
-  const u = tripMat.uniforms;
-  u['kind' + which].value = s.kind; u['mir' + which].value = s.mir || 0;
-  if (s.clip) { u['t' + which].value = s.clip.tex; u['asp' + which].value = s.clip.asp; s.clip.el.play().catch(() => {}); }
-}
-function stepTrip(dt) {
-  trip.level += ((trip.on ? 1 : 0) - trip.level) * Math.min(1, dt * (trip.on ? 1.6 : 1.1));
-  const u = tripMat.uniforms;
-  const oldLook = OLD_LOOK[playingIdx];                      // songs one and two keep the visuals they were born with
-  if (oldLook && trip.level > .003) {
-    if (trip.oldW !== innerWidth || trip.oldH !== innerHeight) { sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height); trip.oldW = innerWidth; trip.oldH = innerHeight; }
-    oldLook(performance.now());
-  }
-  out.style.opacity = oldLook ? trip.level.toFixed(3) : 0;
-  u.uOpacity.value = oldLook ? 0 : trip.level; u.uTime.value = viz.t; u.uBass.value = viz.bass; u.uHigh.value = viz.high; u.uKick.value = viz.kick;
-  if (trip.level < .002 && !trip.on) { trip.clips.forEach((c) => c.el && !c.el.paused && c.el.pause()); return; }
-  if (trip.next) {
-    trip.fade += dt / trip.fadeDur; u.mixAB.value = Math.min(1, trip.fade);
-    if (trip.fade >= 1) {
-      const old = trip.cur; trip.cur = trip.next; trip.next = null; setLayer('A', trip.cur); u.mixAB.value = 0;
-      if (old.clip && old.clip !== trip.cur.clip) old.clip.el.pause();
-    }
-  } else if (trip.on && !oldLook && (viz.t > trip.switchAt || (viz.kick > .95 && viz.t > trip.switchAt - 2.5))) {
-    trip.next = chooseNext(); setLayer('B', trip.next);
-    trip.fade = 0; trip.fadeDur = viz.kick > .95 ? .14 : .55;
-    trip.switchAt = viz.t + rand(3.5, 8);
-  }
-}
-setLayer('A', trip.cur);
 
 /* ================= the old visuals: song one's angel and song two's render, exactly as they were ================= */
 const out = document.createElement('canvas'), ox = out.getContext('2d');
-out.id = 'oldViz'; document.body.append(out);                    // full screen, like it always was                       // what you see: the scene plus effects
+$('listen').prepend(out);                                         // the song gets the whole screen                       // what you see: the scene plus effects
 const vc = document.createElement('canvas'), vx = vc.getContext('2d');   // the scene, which spirals into itself
 const tiny = document.createElement('canvas'), sx = tiny.getContext('2d');   // for the bloom
 const buf = document.createElement('canvas'), bx = buf.getContext('2d');
@@ -2187,243 +1769,27 @@ function frameRender(now) {
 }
 
 
-// they don't play on the balcony: they take the whole screen, the way they were born. leave brings the balcony back.
-const OLD_LOOK = { 0: frame, 1: frameRender };
-
-/* ---------- the views, and moving between them ---------- */
-let view = 'main', tween = null;
-const fitFov = () => {
-  const a = innerWidth / innerHeight;
-  return a >= 1 ? clamp(2 * Math.atan(Math.tan(36 * Math.PI / 180) / a) * 180 / Math.PI, 38, 62)
-                : Math.min(78, 2 * Math.atan(Math.tan(27 * Math.PI / 180) / a) * 180 / Math.PI);
-};
-const portrait = () => innerWidth / innerHeight < 1 || innerWidth < 760;
-function viewPose(name) {
-  const fov = fitFov(), a = innerWidth / innerHeight, th = Math.tan(fov * Math.PI / 360);
-  if (name === 'canvas') {
-    // look straight at the canvas, so it lies flat on the screen; the bedroom door to the right
-    const f = FACING.clone().negate(), right = V(-f.z, 0, f.x);
-    let d, shiftR = 0, shiftU = 0;
-    if (portrait()) { d = CANVAS_SIZE / (.92 * 2 * th * a); shiftU = -.36 * d * th; }      // a little room above it for the way back
-    else { d = CANVAS_SIZE / (.66 * 2 * th); shiftR = .3 * d * th * a; }
-    const pos = CANVAS_AT.clone().addScaledVector(f, -d).addScaledVector(right, shiftR).add(V(0, shiftU, 0));
-    return { pos, look: pos.clone().add(f), fov };
-  }
-  if (name === 'miko') { const pos = portrait() ? V(.02, 1.75, 1.45) : V(.02, 1.4, 1.02); return { pos, look: MIKO_AT.clone(), fov: Math.min(fov, 60) }; }
-  return { pos: V(0, 1.42, .85), look: V(0, 1.12, -11), fov };
-}
-const aim = new THREE.PerspectiveCamera();                       // cameras look down -Z, so aim with one
-const quatFor = (pos, look) => { aim.position.copy(pos); aim.lookAt(look); return aim.quaternion.clone(); };
-function setPose(p) { camera.position.copy(p.pos); camera.quaternion.copy(quatFor(p.pos, p.look)); camera.fov = p.fov; camera.updateProjectionMatrix(); }
-function go(name) {
-  if (tween || name === view) return;
-  const to = viewPose(name);
-  if (name === 'miko') mikoMesh.lookAt(to.pos);                  // she faces you
-  document.body.classList.add('moving');
-  hot(false);
-  tween = { from: { pos: camera.position.clone(), q: camera.quaternion.clone(), fov: camera.fov }, to: { pos: to.pos, q: quatFor(to.pos, to.look), fov: to.fov }, t: 0, start: performance.now(), dur: 1.5, name };
-  if (name !== 'canvas' && view === 'canvas') { sel = null; redraw(); }
-}
-function stepTween(dt) {
-  if (!tween) return;
-  tween.t = Math.min(1, (performance.now() - tween.start) / 1000 / tween.dur);   // real time, however slow the frames
-  const e = tween.t < .5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
-  camera.position.lerpVectors(tween.from.pos, tween.to.pos, e);
-  camera.quaternion.slerpQuaternions(tween.from.q, tween.to.q, e);
-  camera.fov = tween.from.fov + (tween.to.fov - tween.from.fov) * e; camera.updateProjectionMatrix();
-  if (tween.t >= 1) {
-    view = tween.name; tween = null;
-    document.body.dataset.view = view;
-    place();
-    document.body.classList.remove('moving');
-  }
-}
-
-// lay the page's own controls exactly over their places in the scene
-const toScreen = (v) => { const p = v.clone().project(camera); return { x: (p.x + 1) / 2 * innerWidth, y: (1 - p.y) / 2 * innerHeight }; };
-function rectOf(points) {
-  const s = points.map(toScreen);
-  const x0 = Math.min(...s.map((p) => p.x)), x1 = Math.max(...s.map((p) => p.x)), y0 = Math.min(...s.map((p) => p.y)), y1 = Math.max(...s.map((p) => p.y));
-  return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
-}
-const put = (el, r) => Object.assign(el.style, { left: r.x0 + 'px', top: r.y0 + 'px', width: r.w + 'px', height: r.h + 'px' });
-function place() {
-  camera.updateMatrixWorld();
-  if (view === 'main') {
-    // the songs sit in the left pane of glass (on a phone, across both)
-    const z = BAL.front, y0 = .1, y1 = BAL.rail - .05;
-    const xs = portrait() ? [BAL.left, BAL.right] : [BAL.left, -.05];
-    const r = rectOf([V(xs[0], y1, z), V(xs[1], y1, z), V(xs[0], y0, z), V(xs[1], y0, z)]);
-    // it stands on the bottom of the pane and rises as tall as the songs need
-    const m = 14, bottomRoom = 70;
-    const x0 = Math.max(m, r.x0 + 10), x1 = Math.min(innerWidth - m, r.x1 - 10);
-    const bottom = Math.min(innerHeight - bottomRoom, r.y1 - 10);
-    const want = Math.min(600, innerHeight * .78, bottom - m);
-    put($('panel'), { x0, y0: bottom - want, w: Math.min(x1 - x0, 520), h: want });
-    if (!portrait()) {                                                // the invitation stands just left of the canvas
-      const c = toScreen(CANVAS_AT.clone().add(V(0, .55, 0)));
-      Object.assign($('toCanvas').style, { left: Math.min(innerWidth - 230, Math.max(r.x1 + 20, c.x - 230)) + 'px', top: Math.max(16, c.y - 30) + 'px' });
-    }
-  } else if (view === 'canvas') {
-    const f = FACING, right = V(-f.z, 0, f.x).negate(), up = V(0, 1, 0), h = CANVAS_SIZE / 2;
-    const face = CANVAS_AT.clone().addScaledVector(FACING, .02);
-    const r = rectOf([face.clone().addScaledVector(right, -h).addScaledVector(up, h), face.clone().addScaledVector(right, h).addScaledVector(up, h),
-                      face.clone().addScaledVector(right, -h).addScaledVector(up, -h), face.clone().addScaledVector(right, h).addScaledVector(up, -h)]);
-    const s = Math.min(r.w, r.h);
-    put(sleeve, { x0: r.x0 + (r.w - s) / 2, y0: r.y0 + (r.h - s) / 2, w: s, h: s });
-    const tools = $('tools');
-    if (portrait()) { tools.style.left = ''; tools.style.top = ''; }
-    else { tools.style.left = Math.min(innerWidth - 346, r.x1 + 28) + 'px'; tools.style.top = Math.max(16, r.y0) + 'px'; }
-    fitCanvas();
-  } else if (view === 'miko') {
-    mikoMesh.updateMatrixWorld();
-    const g = mikoMesh.geometry.parameters, hw = g.width / 2, hh = g.height / 2;
-    const pts = [V(-hw, hh, 0), V(hw, hh, 0), V(-hw, -hh, 0), V(hw, -hh, 0)].map((p) => p.applyMatrix4(mikoMesh.matrixWorld));
-    put($('mikoBox'), rectOf(pts));
-  }
-}
-
-// pointing at the canvas from the balcony
-const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
-function hot(on, e) {
-  document.body.classList.toggle('hot', on);
-  if (on && e) Object.assign($('hoverTag').style, { left: e.clientX + 'px', top: e.clientY + 'px' });
-}
-function overCanvas(e) {
-  ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  ray.setFromCamera(ptr, camera);
-  return ray.intersectObject(easel, true).length > 0;
-}
-const focused = () => document.body.classList.contains('focus');
-$('gl').addEventListener('pointermove', (e) => {
-  if (focused()) { const k = out.width / innerWidth; viz.look = { x: e.clientX * k, y: e.clientY * k, at: performance.now() }; return; }   // the old eyes follow you
-  if (view === 'main' && !tween) hot(overCanvas(e), e);
-});
-$('gl').addEventListener('click', (e) => { if (view === 'main' && !tween && !focused() && overCanvas(e)) go('canvas'); });
-$('toCanvas').onclick = () => { if (!focused()) go('canvas'); };
-$('back').onclick = () => go('main');
-$('toMiko').onclick = () => { if (!focused()) go('miko'); };
-$('pawIcon').src = STICKER_ART.heart.toDataURL();
-$('backUp').onclick = () => go('main');
-addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.key === 'Escape') { if (focused()) setFocus(false); else go('main'); }
-  if (e.key === ' ' && focused()) { e.preventDefault(); togglePlay(); }
-});
-
-/* ---------- petting miko ----------
-   Her eyes follow you. She blinks now and then. Move over her and she leans into it; tap her and
-   she hops, smiles with her whole face, and hearts and sparkles pop out of her. */
-const mbox = $('mikoBox');
-function lookAt(x, y) {
-  const r = mbox.getBoundingClientRect();
-  if (!r.width) return;
-  mikoEyes.forEach(({ e, el, r: er }) => {
-    const ex = r.left + e.x / mikoInfo.width * r.width, ey = r.top + e.y / mikoInfo.height * r.height;
-    const dx = x - ex, dy = y - ey, dist = Math.hypot(dx, dy) || 1, reach = Math.min(1, dist / 160);
-    const R = er / mikoInfo.width * r.width;                           // the eye's radius on screen
-    el.style.setProperty('--px', (dx / dist * reach * R * .32).toFixed(1) + 'px'); el.style.setProperty('--py', (dy / dist * reach * R * .28).toFixed(1) + 'px');
-    el.style.setProperty('--gx', (dx / dist * reach * R * .5).toFixed(1) + 'px'); el.style.setProperty('--gy', (dy / dist * reach * R * .42).toFixed(1) + 'px');
-  });
-  const cx = r.left + r.width * .6, tilt = clamp((x - cx) / r.width * 9, -6, 6), nod = clamp((y - (r.top + r.height * .3)) / r.height * 3, -3, 3);
-  $('mikoArt').style.transform = `rotate(${tilt.toFixed(2)}deg) translateY(${nod.toFixed(1)}px)`;
-}
-addEventListener('pointermove', (e) => { if (view === 'miko' && !tween) lookAt(e.clientX, e.clientY); });
-(function blink() {                                                   // she blinks every few seconds
-  setTimeout(() => { if (view === 'miko' && !mbox.classList.contains('happy')) { mbox.classList.add('blink'); setTimeout(() => mbox.classList.remove('blink'), 130); } blink(); }, 2200 + Math.random() * 3800);
-})();
-function popAt(x, y, ids, n, spread) {
-  for (let i = 0; i < n; i++) {
-    const img = document.createElement('img'); img.src = STICKER_ART[ids[i % ids.length]].toDataURL(); img.className = 'pop';
-    const size = 20 + Math.random() * 22;
-    Object.assign(img.style, { width: size + 'px', left: (x + rand(-spread, spread)) + 'px', top: (y + rand(-spread * .5, spread * .5)) + 'px', animationDelay: (i * .05) + 's' });
-    img.style.setProperty('--dx', rand(-50, 50) + 'px'); img.style.setProperty('--rot', rand(-30, 30) + 'deg');
-    document.body.append(img); setTimeout(() => img.remove(), 2200);
-  }
-}
-let petAt = 0, stroke = 0, last = null;
-function pet() {                                                      // a tap: the big reaction
-  const t = performance.now();
-  if (t - petAt < 600) return;
-  petAt = t;
-  mbox.classList.remove('happy'); void mbox.offsetWidth; mbox.classList.add('happy');
-  clearTimeout(pet.t); pet.t = setTimeout(() => mbox.classList.remove('happy'), 1600);
-  const r = mbox.getBoundingClientRect();
-  popAt(r.left + r.width * .12, r.top + r.height * .35, ['heart', 'heart', 'sparkle'], 6, 30);
-  popAt(r.left + r.width * .9, r.top + r.height * .35, ['heart', 'star', 'sparkle'], 6, 30);
-}
-mbox.addEventListener('pointerdown', (e) => { pet(); last = [e.clientX, e.clientY]; });
-mbox.addEventListener('pointermove', (e) => {                         // stroking her: hearts where your hand goes
-  if (last) stroke += Math.hypot(e.clientX - last[0], e.clientY - last[1]);
-  last = [e.clientX, e.clientY];
-  mbox.classList.add('pet'); clearTimeout(mbox.t_); mbox.t_ = setTimeout(() => mbox.classList.remove('pet'), 700);
-  if (stroke > 170) { stroke = 0; popAt(e.clientX, e.clientY - 10, ['heart'], 1, 6); if (Math.random() < .35) { mbox.classList.add('happy'); clearTimeout(pet.t); pet.t = setTimeout(() => mbox.classList.remove('happy'), 900); } }
-});
-mbox.addEventListener('pointerleave', () => { last = null; });
-mbox.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') pet(); });
-
-/* ---------- credits ---------- */
-$('creditsBtn').onclick = async () => {
-  const list = $('creditList'); list.innerHTML = '';
-  const add = (html) => { const li = document.createElement('li'); li.innerHTML = html; list.append(li); };
-  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  add('music, words and miko: ours.');
-  try { (await (await fetch('video/credits.json')).json()).forEach((c) => add(`${esc(c.title)} — ${esc(c.author)}, ${esc(c.license)}${c.source_url ? ` · <a href="${esc(c.source_url)}" target="_blank" rel="noopener">source</a>` : ''}`)); } catch {}
-  add('3d: three.js (MIT).');
-  $('credits').hidden = false;
-};
-$('creditsClose').onclick = () => { $('credits').hidden = true; };
-
-/* ---------- the album on the easel follows every change ---------- */
-let albumDirty = true;
-function albumChanged() { albumDirty = true; }
-function paintEaselAlbum() {
-  const g = albumCanvas.getContext('2d'), S = albumCanvas.width;
-  const bg = g.createRadialGradient(S * .3, S * .2, 0, S * .3, S * .2, S * 1.2);
-  bg.addColorStop(0, '#fdfcf9'); bg.addColorStop(.58, '#f3f1ea'); bg.addColorStop(1, '#ebe8df');
-  g.globalCompositeOperation = 'source-over'; g.fillStyle = bg; g.fillRect(0, 0, S, S);
-  g.globalCompositeOperation = 'multiply'; paintAlbum(g, S, true); g.globalCompositeOperation = 'source-over';
-  albumTex.needsUpdate = true; albumDirty = false;
-}
-
-/* ---------- the loop ---------- */
-let lastT = performance.now(), robotClock = 0;
-function resize() {
-  renderer.setSize(innerWidth, innerHeight, false);
-  camera.aspect = innerWidth / innerHeight;
-  if (!tween) setPose(viewPose(view));
-  fitTrip();
-  place();
-}
-addEventListener('resize', resize);
-function loop(t) {
-  requestAnimationFrame(loop);
-  const dt = Math.min(.1, (t - lastT) / 1000); lastT = t;
-  viz.t += dt;
-  levels(viz.t);
-  stepTween(dt);
-  stepTrip(dt);
-  robotClock += dt;
-  if (robotClock > .125 && trip.level < .99) { robotClock = 0; stepRobots(); }
-  robotMat.uniforms.uOpacity.value = 1 - trip.level;
-  mikoMesh.visible = mikoShadow.visible = view === 'miko' || !!(tween && tween.name === 'miko');   // she's at your feet: only there when you look down
-  LAMPS.forEach((l, i) => { l.light.intensity = l.base * (.92 + .08 * Math.sin(viz.t * (.7 + i * .23) + i)); });
-  if (albumDirty) paintEaselAlbum();
-  if (!(OLD_LOOK[playingIdx] && trip.level > .995)) renderer.render(scene, camera);   // the balcony rests while an old song has the whole screen
-}
 
 
 
 /* ---------------- go ---------------- */
-new ResizeObserver(() => { if (view === 'canvas') fitCanvas(); }).observe(sleeve);
+let lastT = performance.now();
+function loop(t) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(.1, (t - lastT) / 1000); lastT = t;
+  viz.t += dt; levels(viz.t);
+  if (document.body.classList.contains('listening')) (LOOK[playingIdx] || frameLight)(t);
+}
+addEventListener('resize', () => { if (document.body.classList.contains('listening')) sizeViz(); });
+new ResizeObserver(() => { if (document.body.classList.contains('signing')) fitCanvas(); }).observe(sleeve);
+let heard = false; try { heard = sessionStorage.getItem('heard') === '1'; } catch {}
+buildThread(!heard);
 updateTools();
-tick(); setInterval(tick, 1000);
+setInterval(tick, 1000);
 ping(); setInterval(ping, 20000);
 load();
-loadMiko().then(() => { if (view === 'miko') place(); }).catch(() => {});
-resize();
-requestAnimationFrame((t) => { lastT = t; loop(t); document.body.classList.add('ready'); });
-window.balcony = { go, play, tripOn, trip, camera, scene, get view() { return view; }, mine: () => mine, set paintings(v) { paintings = v; }, get paintings() { return paintings; }, place, viz };
+requestAnimationFrame(loop);
+window.app = { play, listen, openSheet, peek, buildThread, get playingIdx() { return playingIdx; }, mine: () => mine, viz };
 
 </script>
 </body>

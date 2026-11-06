@@ -2,20 +2,17 @@
 
 new music every friday. one song a week for 12 weeks, album out jan 1st.
 
-You stand on a balcony at night (a small 3D scene, three.js). In front: a glass railing in a black frame,
-split down the middle; across the street a corporate brick office where robots work late. The songs sit in the
-left pane of glass. Press play and the office gives way to the song: licensed footage and patterns, hyper-saturated,
-switching on their own, reacting to the music. The balcony itself never changes.
+The page is a message, late at night: no interface, just lines arriving one at a time, as if someone is
+typing to you. A greeting that knows what time it is where you are, what the project is, this week's song
+("play it"), how many others are listening right now, the countdown, the songs before it, the cover everyone
+signs (a live thumbnail; tap to sign with paint, words and stickers), and "miko says hi" (she peeks up
+from the bottom; her eyes follow you, and she likes being petted).
 
-- **sign album:** hover (or tap) the canvas on the easel to the right. The camera turns to it; the album lies
-  exactly over the canvas, with paint, words and stickers beside it. Behind it, a glass door into a dim bedroom.
-- **pet miko:** the camera looks down to Miko at your feet. Hover or tap her for a happy face, hearts and sparkles.
-- Songs play straight from the mp3; the visuals read a spectrum computed from the same file.
+Play takes the whole screen with a small bar (play/pause, time, a draggable line, back). Songs one and two
+keep their original visuals (the angel, the render); the rest get a warm light breathing with the song.
+Songs play straight from the mp3; the visuals read a spectrum computed from the same file.
 
-Assets:
-- `docs/vendor/three.module.min.js`: three.js 0.169 (MIT).
-- `docs/video/`: short licensed clips (public domain or CC); every credit is in `docs/video/credits.json` and shown under "credits".
-- `docs/img/miko.png` + `miko.json`: Miko cut out from our photo, with eye positions for the happy face.
+- `docs/img/miko.png` + `miko.json`: Miko cut out from our photo, with eye positions.
 - `docs/stickers.js`: the 32 pixel stickers. Their ids must match `sticker_ids` in `supabase.sql`.
 
 - **Site:** GitHub Pages, published from the `docs/` folder on `main` (Settings → Pages → Deploy from a branch).
