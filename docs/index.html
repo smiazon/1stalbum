@@ -55,7 +55,10 @@
   .songs li { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; padding: 9px 10px; margin: 0 -10px; border-radius: 10px; cursor: pointer; font-size: 15px; }
   .songs li .n, .songs li .d { color: var(--dim); font-size: 13px; }
   .songs li:hover { background: rgba(255, 255, 255, .06); }
-  .songs li:active, .songs li.flash { background: var(--ink); color: #15110e; }
+  .songs li.empty { cursor: default; padding-top: 7px; padding-bottom: 7px; }
+  .songs li.empty:hover { background: none; }
+  .songs li.empty .t { border-bottom: 1px dashed var(--hair); height: 1px; align-self: center; }
+  .songs li:not(.empty):active, .songs li.flash { background: var(--ink); color: #15110e; }
   .songs li:active .n, .songs li:active .d, .songs li.flash .n, .songs li.flash .d { color: #15110e; }
   .songs li.playing .t::after { content: ' ♪'; color: var(--warm); }
 
@@ -75,6 +78,9 @@
   #listen { position: fixed; inset: 0; z-index: 10; background: #000; opacity: 0; visibility: hidden; transition: opacity .8s ease, visibility 0s linear .8s; }
   body.listening #listen { opacity: 1; visibility: visible; transition: opacity .8s ease, visibility 0s; }
   #listen canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #tripGL { display: none !important; }
+  body.gl-song #tripGL { display: block !important; }
+  body.gl-song #listen canvas:not(#tripGL) { display: none; }
   .bar { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(520px, calc(100vw - 24px)); z-index: 2;
          display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 12px; border-radius: 999px; background: rgba(10, 9, 9, .55); border: 1px solid rgba(255, 255, 255, .08);
          -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity .5s; }
@@ -197,7 +203,10 @@
               background: rgba(28, 23, 20, .9); border: 1px solid var(--hair); border-radius: 999px; padding: 8px 14px; cursor: pointer; }
   body.peeking #peekBye { opacity: 1; pointer-events: auto; }
 
-  @media (max-width: 600px) { .line { font-size: 18.5px; } #chat { padding-top: max(10vh, 56px); } }
+  @media (max-width: 600px) {
+    .line { font-size: 18.5px; } #chat { padding-top: max(10vh, 56px); }
+    #peek { width: min(460px, 100vw); } body.peeking #peek { transform: translate(-50%, 18%); }
+  }
   @media (prefers-reduced-motion: reduce) { .line { transition: none; } .ring::before, .pp::before, .typing i { animation: none; } }
 </style>
 </head>
@@ -438,18 +447,21 @@ function buildThread(animate) {
   } else L.push(el('p', 'line', 'the first one comes friday.'));
   const peers = el('p', 'line small'); peers.id = 'peersLine'; peers.hidden = !others; peers.textContent = peersText; L.push(peers);
   if (out < SONGS.length) L.push(el('p', 'line', `the next one comes in <span id="next"></span>.`));
-  if (out > 1) {
-    L.push(el('p', 'line', 'the ones before it:'));
-    const ol = el('ol', 'line songs');
-    for (let i = out - 2; i >= 0; i--) {
-      const li = el('li', '', `<span class="n">${String(i + 1).padStart(2, '0')}</span><span class="t">${songName(i)}</span><span class="d">${dateOf(i)}</span>`);
-      li.dataset.i = i; li.tabIndex = 0; li.setAttribute('role', 'button');
+  // all twelve, one at the top: the ones that are out play; the rest wait, empty
+  L.push(el('p', 'line', 'all twelve:'));
+  const ol = el('ol', 'line songs');
+  SONGS.forEach((_, i) => {
+    const isOut = i < out;
+    const li = el('li', isOut ? '' : 'empty', `<span class="n">${String(i + 1).padStart(2, '0')}</span><span class="t">${isOut ? songName(i) : ''}</span><span class="d">${dateOf(i)}</span>`);
+    li.dataset.i = i;
+    if (isOut) {
+      li.tabIndex = 0; li.setAttribute('role', 'button');
       li.onclick = () => choose(li, i);
       li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(li, i); } };
-      ol.append(li);
     }
-    L.push(ol);
-  }
+    ol.append(li);
+  });
+  L.push(ol);
   L.push(el('p', 'line', 'one more thing. everyone who listens signs the cover. you should too.'));
   const cover = el('div', 'line cover');
   const thumb = el('canvas'); thumb.id = 'coverThumb'; thumb.width = thumb.height = 192; thumb.title = 'the cover'; thumb.onclick = () => openSheet(true);
@@ -515,6 +527,9 @@ function togglePlay() { if (playingIdx < 0) return; if (audio.paused || audio.en
 function listen(on) {
   if (on && !document.body.classList.contains('listening')) { sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height); wake(); }
   document.body.classList.toggle('listening', on);
+  document.body.classList.toggle('gl-song', playingIdx === 2);
+  if (on && playingIdx === 2) tripStart(); else tripStop();
+  if (!on || playingIdx !== 3) sun.clips.forEach((c) => c.el && !c.el.paused && c.el.pause());
   $('listen').setAttribute('aria-hidden', String(!on));
 }
 const playing = () => !audio.paused && !audio.ended;
@@ -567,7 +582,214 @@ function frameLight() {
   }
   ox.globalCompositeOperation = 'source-over';
 }
-const LOOK = { 0: frame, 1: frameRender };
+
+/* ---------------- WHERE DOES LIFE GO?: the world, hyper-saturated, switching on its own ----------------
+   The same footage and the same shader it was born with, now taking the whole screen.
+   Clips are licensed (see video/credits.json); between them, patterns made right here. */
+const tripCanvas = document.createElement('canvas'); tripCanvas.id = 'tripGL'; $('listen').prepend(tripCanvas);
+const TRIP_FRAG = `precision mediump float;
+uniform sampler2D tA, tB; uniform float kindA, kindB, aspA, aspB, mirA, mirB, mixAB, uTime, uBass, uHigh, uKick, uOpacity, PLANE;
+    varying vec2 vUv;
+    vec3 hue(vec3 c, float a) { const vec3 k = vec3(.57735); float ca = cos(a); return c * ca + cross(k, c) * sin(a) + k * dot(k, c) * (1. - ca); }
+    vec3 pattern(float k, vec2 p, float t) {
+      p -= .5; p.x *= PLANE;
+      if (k < 1.5) { float v = sin(p.x * 9. + t) + sin(p.y * 7. - t * 1.3) + sin((p.x + p.y) * 6. + t * .7) + sin(length(p) * 14. - t * 2. - uBass * 4.);
+                     return .5 + .5 * cos(vec3(0., 2.1, 4.2) + v * 1.7 + t * .5); }
+      if (k < 2.5) { float r = length(p) + .001, a = atan(p.y, p.x);
+                     float v = sin(3. / r - t * 4. - uBass * 5.) * .5 + .5, s = sin(a * 6. + t + 2. / r) * .5 + .5;
+                     return (.5 + .5 * cos(vec3(0., 2., 4.) + v * 3. + s * 2. + t)) * smoothstep(0., .08, r); }
+      if (k < 3.5) { float r = length(p), a = atan(p.y, p.x); a = abs(mod(a + t * .1, .7854) - .3927);
+                     vec2 q = vec2(cos(a), sin(a)) * r; float v = sin(q.x * 34. - t * 3.) * sin(q.y * 34. + t * 2.);
+                     return .5 + .5 * cos(vec3(1., 3., 5.) + v * 2.2 + r * 7. - t); }
+      vec2 q = p * (7. + 3. * sin(t * .3)); q += sin(q.yx * 1.3 + t) * .7;
+      return mix(vec3(1., .1, .65), vec3(.1, 1., .85), step(0., sin(q.x) * sin(q.y))) * (.65 + .35 * sin(t * 2. + length(p) * 9.));
+    }
+    vec2 cover(vec2 uv, float asp) {
+      if (asp > PLANE) uv.x = (uv.x - .5) * PLANE / asp + .5; else uv.y = (uv.y - .5) * asp / PLANE + .5;
+      return uv;
+    }
+    vec3 layer(sampler2D tex, float kind, float asp, float mir, vec2 uv) {
+      if (mir > .5) uv.x = .5 + abs(uv.x - .5);
+      if (kind > .5) return pattern(kind, uv, uTime);
+      vec2 w = uv + vec2(sin(uv.y * 14. + uTime * 2.), cos(uv.x * 11. + uTime * 1.7)) * .005 * (1. + uBass * 4.);
+      vec2 c = cover(w, asp); float ca = .003 + uKick * .012;
+      return vec3(texture2D(tex, c + vec2(ca, 0.)).r, texture2D(tex, c).g, texture2D(tex, c - vec2(ca, 0.)).b);
+    }
+    void main() {
+      vec3 c = mix(layer(tA, kindA, aspA, mirA, vUv), layer(tB, kindB, aspB, mirB, vUv), mixAB);
+      float l = dot(c, vec3(.299, .587, .114));
+      c = mix(vec3(l), c, 2.5 + uBass * 1.4);                                   // hyper-saturated
+      c = hue(c, uTime * .22 + uBass * 1.6 + vUv.y * .9 + vUv.x * .4);           // the colours drift, and lurch on the bass
+      c = (c - .5) * (1.22 + uKick * .3) + .5 + uKick * .1;
+      gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
+    }`;
+const trip = { gl: null, prog: null, u: {}, tex: [], clips: [], cur: { kind: 1 }, next: null, fade: 0, fadeDur: .5, switchAt: 0, last: -1 };
+fetch('video/credits.json').then((r) => r.json()).then((list) => { trip.clips = list.map((c) => ({ ...c, el: null, ready: false, asp: 16 / 9 })); }).catch(() => {});
+function tripInit() {
+  if (trip.gl) return trip.gl;
+  const gl = tripCanvas.getContext('webgl', { alpha: false, antialias: false, premultipliedAlpha: false });
+  if (!gl) return null;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 p; varying vec2 vUv; void main() { vUv = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }'));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, TRIP_FRAG));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  for (const n of ['tA', 'tB', 'kindA', 'kindB', 'aspA', 'aspB', 'mirA', 'mirB', 'mixAB', 'uTime', 'uBass', 'uHigh', 'uKick', 'uOpacity', 'PLANE']) trip.u[n] = gl.getUniformLocation(prog, n);
+  for (let i = 0; i < 2; i++) {
+    const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + i); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0]));
+    for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+    trip.tex.push(t);
+  }
+  gl.uniform1i(trip.u.tA, 0); gl.uniform1i(trip.u.tB, 1);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  trip.gl = gl; trip.prog = prog;
+  return gl;
+}
+function loadClip(c) {
+  if (c.el) return;
+  const v = c.el = document.createElement('video');
+  v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto'; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+  v.addEventListener('loadedmetadata', () => { if (v.videoHeight) c.asp = v.videoWidth / v.videoHeight; });
+  v.addEventListener('canplay', () => { c.ready = true; }, { once: true });
+  v.src = 'video/' + c.file;
+}
+function tripStart() {
+  [...trip.clips].sort(() => Math.random() - .5).slice(0, 2).forEach(loadClip);
+  trip.switchAt = viz.t + rand(2.5, 4);
+}
+function tripStop() { trip.clips.forEach((c) => c.el && !c.el.paused && c.el.pause()); }
+function chooseNext() {
+  const ready = trip.clips.filter((c, i) => c.ready && i !== trip.last && c !== trip.cur.clip);
+  const unloaded = trip.clips.filter((c) => !c.el);
+  if (unloaded.length) loadClip(unloaded[Math.floor(Math.random() * unloaded.length)]);
+  if (ready.length && Math.random() < .72) {
+    const clip = ready[Math.floor(Math.random() * ready.length)];
+    trip.last = trip.clips.indexOf(clip);
+    return { kind: 0, clip, mir: Math.random() < .3 ? 1 : 0 };
+  }
+  let k; do { k = 1 + Math.floor(Math.random() * 4); } while (k === trip.cur.kind);
+  return { kind: k, mir: 0 };
+}
+function frameTrip(dt) {
+  const gl = tripInit(); if (!gl) return frameLight();
+  const dpr = Math.min(devicePixelRatio || 1, innerWidth < 760 ? 1.25 : 1.5), W = Math.round(innerWidth * dpr), H = Math.round(innerHeight * dpr);
+  if (tripCanvas.width !== W || tripCanvas.height !== H) { tripCanvas.width = W; tripCanvas.height = H; gl.viewport(0, 0, W, H); }
+  if (trip.next) {
+    trip.fade += dt / trip.fadeDur;
+    if (trip.fade >= 1) { const old = trip.cur; trip.cur = trip.next; trip.next = null; trip.fade = 0; if (old.clip && old.clip !== trip.cur.clip) old.clip.el.pause(); }
+  } else if (viz.t > trip.switchAt || (viz.kick > .95 && viz.t > trip.switchAt - 2.5)) {
+    trip.next = chooseNext(); if (trip.next.clip) trip.next.clip.el.play().catch(() => {});
+    trip.fade = 0; trip.fadeDur = viz.kick > .95 ? .14 : .55; trip.switchAt = viz.t + rand(3.5, 8);
+  }
+  if (trip.cur.clip && trip.cur.clip.el.paused) trip.cur.clip.el.play().catch(() => {});
+  const layer = (s, unit, which) => {
+    gl.uniform1f(trip.u['kind' + which], s.kind); gl.uniform1f(trip.u['mir' + which], s.mir || 0);
+    if (s.clip) {
+      gl.uniform1f(trip.u['asp' + which], s.clip.asp);
+      if (s.clip.el.readyState >= 2) { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, trip.tex[unit]); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, s.clip.el); }
+    }
+  };
+  layer(trip.cur, 0, 'A'); layer(trip.next || trip.cur, 1, 'B');
+  const u = trip.u;
+  gl.uniform1f(u.mixAB, trip.next ? Math.min(1, trip.fade) : 0); gl.uniform1f(u.uTime, viz.t); gl.uniform1f(u.uBass, viz.bass); gl.uniform1f(u.uHigh, viz.high);
+  gl.uniform1f(u.uKick, viz.kick); gl.uniform1f(u.uOpacity, 1); gl.uniform1f(u.PLANE, W / H);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+/* ---------------- BABY MONKEY: a summer rise ----------------
+   Over the length of the song the sun comes up, slowly, from a blue night to a gold morning. Baby
+   monkeys drift through it on film, and every cut burns in like the end of a reel. */
+const sun = { clips: [], cur: null, prev: null, fade: 1, switchAt: 0, burns: [], last: -1 };
+fetch('video/monkey/credits.json').then((r) => r.json()).then((list) => { sun.clips = list.map((c) => ({ ...c, el: null, ready: false })); }).catch(() => {});
+function loadMonkey(c) {
+  if (c.el) return;
+  const v = c.el = document.createElement('video');
+  v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto'; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+  v.addEventListener('canplay', () => { c.ready = true; }, { once: true });
+  v.src = 'video/monkey/' + c.file;
+}
+const mixC = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgbS = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+// the sky over the song: night, then the first light, then dawn, then a gold morning
+const SKY = [[0, '#070a1f', '#1d1b3d'], [.25, '#1b1d4a', '#7a4466'], [.5, '#3e4a8a', '#f08a5d'], [.75, '#6d9ad1', '#ffc48a'], [1, '#8fc2ec', '#ffe2b0']].map(([p, a, b]) => [p, hex(a), hex(b)]);
+function skyAt(p) {
+  for (let i = 1; i < SKY.length; i++) if (p <= SKY[i][0]) { const [p0, a0, b0] = SKY[i - 1], [p1, a1, b1] = SKY[i], f = (p - p0) / (p1 - p0); return [mixC(a0, a1, f), mixC(b0, b1, f)]; }
+  return [SKY[4][1], SKY[4][2]];
+}
+function burnAt(side) { sun.burns.push({ t0: viz.t, side, y: rand(.2, .8), hue: rand(10, 32) }); }
+function frameSun() {
+  const W = out.width, H = out.height, M = Math.min(W, H), t = viz.t, B = viz.bass, K = viz.kick;
+  const p = audio.duration ? clamp(audio.currentTime / audio.duration, 0, 1) : 0;
+  const [top, low] = skyAt(p), horizon = H * .76;
+  ox.save();
+  ox.globalCompositeOperation = 'source-over'; ox.globalAlpha = 1;
+  ox.translate(Math.sin(t * 7.3) * M * .0009, Math.cos(t * 5.1) * M * .0012);                // the gate weaves, just a little
+  const sky = ox.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, rgbS(top)); sky.addColorStop(.76, rgbS(low)); sky.addColorStop(1, rgbS(mixC(low, [40, 24, 30], .55)));
+  ox.fillStyle = sky; ox.fillRect(-10, -10, W + 20, H + 20);
+  // the monkeys: one clip at a time, crossfading, every so often a new one
+  if (sun.clips.length) {
+    if (!sun.cur || viz.t > sun.switchAt) {
+      const ready = sun.clips.filter((c, i) => c.ready && i !== sun.last);
+      sun.clips.filter((c) => !c.el).slice(0, 2).forEach(loadMonkey);
+      if (ready.length) {
+        const c = ready[Math.floor(Math.random() * ready.length)];
+        sun.prev = sun.cur; sun.cur = c; sun.last = sun.clips.indexOf(c); sun.fade = 0;
+        c.el.currentTime = 0; c.el.play().catch(() => {});
+        burnAt(Math.random() < .5 ? -1 : 1);
+        sun.switchAt = viz.t + rand(6.5, 9.5);
+      } else sun.switchAt = viz.t + .5;
+    }
+    sun.fade = Math.min(1, sun.fade + 1 / 70);
+    const draw = (c, a) => {
+      if (!c || !c.el || c.el.readyState < 2 || a <= 0) return;
+      const v = c.el, s = Math.max(W / v.videoWidth, H / v.videoHeight) * 1.04, w = v.videoWidth * s, h = v.videoHeight * s;
+      ox.globalAlpha = a; ox.drawImage(v, (W - w) / 2, (H - h) / 2, w, h);
+    };
+    ox.globalCompositeOperation = 'source-over';
+    draw(sun.prev, (1 - sun.fade) * .82); draw(sun.cur, sun.fade * .82);
+    if (sun.fade >= 1 && sun.prev) { sun.prev.el.pause(); sun.prev = null; }
+    ox.globalAlpha = 1;
+    ox.globalCompositeOperation = 'soft-light';                                            // graded into the light of the hour
+    const wash = ox.createLinearGradient(0, 0, 0, H); wash.addColorStop(0, rgbS(top, .9)); wash.addColorStop(1, rgbS(low, .9));
+    ox.fillStyle = wash; ox.fillRect(0, 0, W, H);
+  }
+  // the sun, rising with the song
+  const sy = horizon - p * H * .52 + M * .04, sr = M * (.075 + p * .02) * (1 + B * .05);
+  const sunC = mixC(hex('#ff6a2b'), hex('#fff1cf'), Math.min(1, p * 1.3));
+  ox.globalCompositeOperation = 'screen';
+  const halo = ox.createRadialGradient(W / 2, sy, 0, W / 2, sy, M * (.9 + B * .15));
+  halo.addColorStop(0, rgbS(sunC, .55 + K * .1)); halo.addColorStop(.18, rgbS(sunC, .22)); halo.addColorStop(1, rgbS(sunC, 0));
+  ox.fillStyle = halo; ox.fillRect(0, 0, W, H);
+  ox.fillStyle = rgbS(sunC, .95); ox.beginPath(); ox.arc(W / 2, sy, sr, 0, Math.PI * 2); ox.fill();
+  ox.globalCompositeOperation = 'source-over';
+  ox.fillStyle = rgbS(mixC(low, [20, 12, 18], .6), .55); ox.fillRect(-10, horizon + M * .02, W + 20, H);   // the land the sun comes up behind
+  // film burn: at every cut, and now and then on a big beat, the edge of the frame catches fire
+  if (K > .97 && Math.random() < .04) burnAt(Math.random() < .5 ? -1 : 1);
+  sun.burns = sun.burns.filter((b) => viz.t - b.t0 < 1.6);
+  ox.globalCompositeOperation = 'screen';
+  for (const b of sun.burns) {
+    const a = viz.t - b.t0, life = a < .25 ? a / .25 : 1 - (a - .25) / 1.35;
+    const x = b.side < 0 ? -M * .1 + a * M * .5 : W + M * .1 - a * M * .5, y = b.y * H, r = M * (.35 + a * .5);
+    const g = ox.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `hsla(${b.hue + 25}, 100%, 75%, ${.9 * life})`); g.addColorStop(.3, `hsla(${b.hue}, 100%, 55%, ${.6 * life})`); g.addColorStop(.7, `hsla(${b.hue - 10}, 100%, 35%, ${.25 * life})`); g.addColorStop(1, 'hsla(0,100%,30%,0)');
+    ox.fillStyle = g; ox.fillRect(0, 0, W, H);
+    ox.fillStyle = `rgba(255, 190, 120, ${.12 * life})`; ox.fillRect(0, 0, W, H);
+  }
+  ox.restore();
+  // soft vignette and thin letterbox bars, like an old print
+  ox.globalCompositeOperation = 'multiply';
+  const vig = ox.createRadialGradient(W / 2, H / 2, M * .35, W / 2, H / 2, Math.hypot(W, H) * .62);
+  vig.addColorStop(0, 'rgb(255,255,255)'); vig.addColorStop(1, 'rgb(90,70,70)');
+  ox.fillStyle = vig; ox.fillRect(0, 0, W, H);
+  ox.globalCompositeOperation = 'source-over';
+  ox.fillStyle = '#000'; const bar = H * .055; ox.fillRect(0, 0, W, bar); ox.fillRect(0, H - bar, W, bar);
+}
+const LOOK = { 0: () => frame(performance.now()), 1: () => frameRender(performance.now()), 2: frameTrip, 3: frameSun };
 
 /* ---------------- the cover ---------------- */
 function openSheet(on) {
@@ -1778,7 +2000,7 @@ function loop(t) {
   requestAnimationFrame(loop);
   const dt = Math.min(.1, (t - lastT) / 1000); lastT = t;
   viz.t += dt; levels(viz.t);
-  if (document.body.classList.contains('listening')) (LOOK[playingIdx] || frameLight)(t);
+  if (document.body.classList.contains('listening')) (LOOK[playingIdx] || frameLight)(dt);
 }
 addEventListener('resize', () => { if (document.body.classList.contains('listening')) sizeViz(); });
 new ResizeObserver(() => { if (document.body.classList.contains('signing')) fitCanvas(); }).observe(sleeve);
