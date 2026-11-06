@@ -301,7 +301,7 @@ const SONGS = [
   { at: '2026-10-16T00:00:00-04:00', src: 'tracks/01.mp3', title: 'IM SO INLOVE' },
   { at: '2026-10-23T00:00:00-04:00', src: 'tracks/02.mp3', title: 'SIMULATION', viz: 'render' },
   { at: '2026-10-30T00:00:00-04:00', src: 'tracks/03.mp3', title: 'WHERE DOES LIFE GO?' },
-  { at: '2026-11-05T20:30:00-05:00', src: 'tracks/04.mp3', title: 'BABY MONKEY' },   // dropped early, on a thursday night
+  { at: '2026-11-05T20:30:00-05:00', date: '2026-11-06T00:00:00-05:00', src: 'tracks/04.mp3', title: 'BABY MONKEY' },
   { at: '2026-11-13T00:00:00-05:00', src: null, title: null },
   { at: '2026-11-20T00:00:00-05:00', src: null, title: null },
   { at: '2026-11-27T00:00:00-05:00', src: null, title: null },
@@ -410,7 +410,7 @@ const short = (ms) => {
   return d ? `${d}d ${hms}` : hms;
 };
 const songName = (i) => SONGS[i].title || `song ${words(i + 1)}`;
-const dateOf = (i) => new Date(SONGS[i].t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).toLowerCase();
+const dateOf = (i) => new Date(SONGS[i].date || SONGS[i].t).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' }).toLowerCase();
 
 
 
@@ -437,7 +437,7 @@ function greeting() {
   if (h < 5) return ['hey.', "you're up late."];
   if (h < 12) return ['morning.'];
   if (h < 18) return ['hey.'];
-  return ['hey.', 'long day?'];
+  return ['hey.'];
 }
 function buildThread(animate) {
   const out = released();
