@@ -302,7 +302,7 @@ const SONGS = [
   { at: '2026-10-23T00:00:00-04:00', src: 'tracks/02.mp3', title: 'SIMULATION', viz: 'render' },
   { at: '2026-10-30T00:00:00-04:00', src: 'tracks/03.mp3', title: 'WHERE DOES LIFE GO?' },
   { at: '2026-11-05T20:30:00-05:00', date: '2026-11-06T00:00:00-05:00', src: 'tracks/04.mp3', title: 'BABY MONKEY' },
-  { at: '2026-11-13T00:00:00-05:00', src: null, title: null },
+  { at: '2026-11-13T00:00:00-05:00', src: 'tracks/05.mp3', title: 'CHINA MASTER' },
   { at: '2026-11-20T00:00:00-05:00', src: null, title: null },
   { at: '2026-11-27T00:00:00-05:00', src: null, title: null },
   { at: '2026-12-04T00:00:00-05:00', src: null, title: null },
@@ -429,7 +429,8 @@ const say = (text, hold = 4000) => { msg.textContent = text; clearTimeout(say.t)
 const PLAY_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg>';
 const thread = $('thread');
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
-const released = () => SONGS.filter((s) => s.t <= now()).length;
+const released = () => SONGS.filter((s) => s.t <= now()).length;          // how many fridays have come
+const playable = (i) => SONGS[i].t <= now() && !!SONGS[i].src;          // and which of them have a song yet
 
 // what to say first depends on when you're here
 function greeting() {
@@ -445,7 +446,7 @@ function buildThread(animate) {
   const L = greeting().map((t) => el('p', 'line', t));
   L.push(el('p', 'line', "i'm making a song every week, for twelve weeks. the album comes out january 1st."));
   if (out) {
-    const i = out - 1;
+    let i = out - 1; while (i > 0 && !SONGS[i].src) i--;             // the newest song that's actually here
     L.push(el('p', 'line', `this week's is called <b>${songName(i)}</b>.`));
     const acts = el('div', 'line acts');
     const b = el('button', 'act', `<span class="ring">${PLAY_SVG}</span>play it`); b.onclick = () => play(i);
@@ -457,7 +458,7 @@ function buildThread(animate) {
   L.push(el('p', 'line', 'all twelve:'));
   const ol = el('ol', 'line songs');
   SONGS.forEach((_, i) => {
-    const isOut = i < out;
+    const isOut = playable(i);
     const li = el('li', isOut ? '' : 'empty', `<span class="n">${String(i + 1).padStart(2, '0')}</span><span class="t">${isOut ? songName(i) : ''}</span><span class="d">${dateOf(i)}</span>`);
     li.dataset.i = i;
     if (isOut) {
