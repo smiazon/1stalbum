@@ -847,139 +847,44 @@ $('creditsBtn').onclick = async () => {
 };
 $('creditsClose').onclick = () => { $('credits').hidden = true; };
 
-/* ---------------- IM SO LONELY: one streetlight ----------------
-   An empty street at night, in the rain. One lamp, and one small figure standing in its light.
-   Over the song the camera slowly pulls away, and the dark around them grows. The rain only
-   shows where the lamp catches it; it falls harder on the low notes. */
-const rain = Array.from({ length: 420 }, () => ({ x: Math.random(), y: Math.random(), v: .6 + Math.random() * .7, l: .6 + Math.random() * .8 }));
-const splashes = [];
-let flick = 1;
-function drawLonely() {                                       // the scene itself, drawn clean, offstage
-  const W = vc.width, H = vc.height, M = Math.min(W, H), t = viz.t, B = viz.bass, Hi = viz.high, K = viz.kick;
-  const p = audio.duration ? clamp(audio.currentTime / audio.duration, 0, 1) : 0;
-  const ease = p * p * (3 - 2 * p), s = 1.6 - ease * .75;                       // closer at first, then further and further away
-  const gy = H * .8, lx = W * .55, top = gy - M * .56, head = { x: lx - M * .075, y: top + M * .02 };
-  // the lamp mostly holds; now and then it trembles
-  if (Math.random() < .004 + K * .01) flick = .35 + Math.random() * .3;
-  flick += (1 - flick) * .08;
-  const glow = flick * (.92 + Math.sin(t * 2.3) * .03);
-  vx.globalCompositeOperation = 'source-over'; vx.globalAlpha = 1;
-  const sky = vx.createLinearGradient(0, 0, 0, H);
-  sky.addColorStop(0, '#05070c'); sky.addColorStop(.62, '#0d121c'); sky.addColorStop(.8, '#121825'); sky.addColorStop(.801, '#07090e'); sky.addColorStop(1, '#040507');
-  vx.fillStyle = sky; vx.fillRect(0, 0, W, H);
-  vx.save();
-  vx.translate(lx, gy); vx.scale(s, s); vx.translate(-lx, -gy);
-  const warm = (a) => `rgba(255, 206, 150, ${a})`;
-  // the light falling from the lamp, and the pool it makes on the wet street
-  vx.globalCompositeOperation = 'screen';
-  const cone = vx.createLinearGradient(0, head.y, 0, gy);
-  cone.addColorStop(0, warm(.2 * glow)); cone.addColorStop(1, warm(.05 * glow));
-  vx.fillStyle = cone; vx.beginPath(); vx.moveTo(head.x - M * .012, head.y); vx.lineTo(head.x + M * .012, head.y); vx.lineTo(head.x + M * .19, gy); vx.lineTo(head.x - M * .19, gy); vx.closePath(); vx.fill();
-  const pool = vx.createRadialGradient(head.x, gy, 0, head.x, gy, M * .3);
-  pool.addColorStop(0, warm(.32 * glow)); pool.addColorStop(1, warm(0));
-  vx.save(); vx.translate(head.x, gy); vx.scale(1, .18); vx.translate(-head.x, -gy); vx.fillStyle = pool; vx.fillRect(head.x - M * .4, gy - M * .4, M * .8, M * .8); vx.restore();
-  // its reflection, shivering in a puddle
-  for (let i = 0; i < 14; i++) {
-    const y = gy + M * (.012 + i * .011), wob = Math.sin(t * 3 + i * 1.7) * M * .006 * (1 + B), w = M * (.02 - i * .0011) * (1 + Math.sin(t * 5 + i) * .2);
-    vx.fillStyle = warm((.22 - i * .014) * glow); vx.fillRect(head.x - w / 2 + wob, y, w, M * .006);
-  }
-  const halo = vx.createRadialGradient(head.x, head.y, 0, head.x, head.y, M * .11);
-  halo.addColorStop(0, warm(.9 * glow)); halo.addColorStop(.15, warm(.45 * glow)); halo.addColorStop(1, warm(0));
-  vx.fillStyle = halo; vx.fillRect(head.x - M * .12, head.y - M * .12, M * .24, M * .24);
-  // the lamppost
-  vx.globalCompositeOperation = 'source-over';
-  vx.strokeStyle = '#020305'; vx.lineCap = 'round'; vx.lineWidth = M * .008;
-  vx.beginPath(); vx.moveTo(lx, gy); vx.lineTo(lx, top + M * .03); vx.quadraticCurveTo(lx, top - M * .005, lx - M * .03, top); vx.lineTo(head.x + M * .005, top + M * .004); vx.stroke();
-  vx.fillStyle = '#020305'; vx.beginPath(); vx.moveTo(head.x - M * .018, head.y); vx.lineTo(head.x + M * .018, head.y); vx.lineTo(head.x + M * .01, head.y - M * .014); vx.lineTo(head.x - M * .01, head.y - M * .014); vx.closePath(); vx.fill();
-  vx.fillStyle = warm(Math.min(1, glow)); vx.fillRect(head.x - M * .011, head.y - M * .002, M * .022, M * .004);
-  // someone, standing in the light, hands in their pockets
-  const fx = head.x + M * .035, fh = M * .085, sway = Math.sin(t * .6) * M * .0012;
-  vx.fillStyle = '#030406';
-  vx.beginPath(); vx.ellipse(fx + sway, gy - fh * .9, fh * .085, fh * .1, 0, 0, Math.PI * 2); vx.fill();
-  vx.beginPath();
-  vx.moveTo(fx - fh * .13 + sway, gy - fh * .78); vx.quadraticCurveTo(fx - fh * .17, gy - fh * .4, fx - fh * .12, gy - fh * .3);
-  vx.lineTo(fx - fh * .08, gy); vx.lineTo(fx - fh * .02, gy); vx.lineTo(fx, gy - fh * .28); vx.lineTo(fx + fh * .03, gy); vx.lineTo(fx + fh * .09, gy);
-  vx.lineTo(fx + fh * .12, gy - fh * .3); vx.quadraticCurveTo(fx + fh * .17, gy - fh * .4, fx + fh * .13 + sway, gy - fh * .78); vx.closePath(); vx.fill();
-  vx.fillStyle = 'rgba(255, 206, 150, .18)'; vx.fillRect(fx - fh * .13 + sway, gy - fh * .78, fh * .03, fh * .4);     // the lamp catching one shoulder
-  // the rain: grey in the dark, gold where the light catches it
-  const fall = .006 + B * .006;
-  vx.lineWidth = Math.max(1, M / 900);
-  for (const d of rain) {
-    d.y += fall * d.v; d.x -= fall * d.v * .14;
-    if (d.y > 1) { if (Math.abs(d.x * W - head.x) < M * .2 && Math.random() < .5) splashes.push({ x: d.x * W, t0: t }); d.y = -.02; d.x = Math.random() * 1.1; }
-    const x = d.x * W, y = d.y * (gy - 0) , len = M * .024 * d.l;
-    const inLight = Math.max(0, 1 - Math.abs(x - head.x) / (M * (.03 + .17 * Math.max(0, (y - head.y) / (gy - head.y))))) * (y > head.y ? 1 : 0);
-    const a = .05 + inLight * (.5 + Hi * .3) * glow;
-    vx.strokeStyle = inLight > .05 ? `rgba(255, 214, 165, ${a.toFixed(3)})` : `rgba(150, 170, 200, ${a.toFixed(3)})`;
-    vx.beginPath(); vx.moveTo(x, y); vx.lineTo(x + len * .14, y - len); vx.stroke();
-  }
-  for (let i = splashes.length - 1; i >= 0; i--) {                                    // little rings where it lands in the light
-    const sp = splashes[i], a = t - sp.t0;
-    if (a > .5) { splashes.splice(i, 1); continue; }
-    vx.strokeStyle = warm((.35 * (1 - a / .5) * glow).toFixed(3));
-    vx.beginPath(); vx.ellipse(sp.x, gy + M * .004, M * (.003 + a * .02), M * (.001 + a * .004), 0, 0, Math.PI * 2); vx.stroke();
-  }
-  vx.restore();
-  // the dark closing in at the edges
-  vx.globalCompositeOperation = 'multiply';
-  const vig = vx.createRadialGradient(lx, gy - M * .2, M * .2, lx, gy - M * .2, Math.hypot(W, H) * .65);
-  vig.addColorStop(0, 'rgb(255,255,255)'); vig.addColorStop(1, 'rgb(25,28,38)');
-  vx.fillStyle = vig; vx.fillRect(0, 0, W, H);
-  vx.globalCompositeOperation = 'source-over';
-}
-
-// ...and then seen the way it feels: through wet glass, with an old lens. The picture wavers in
-// bands, keeps a ghost of itself, splits at the edges into red and blue, blooms, and big drops
-// slide down in front of it, each one holding a small upside-down copy of the light.
-const lone = { prev: document.createElement('canvas'), tint: document.createElement('canvas'), soft: document.createElement('canvas'), drops: [] };
+/* ---------------- IM SO LONELY: one light ----------------
+   A dark night, and one warm light far away, with its reflection on the wet ground. Fine rain
+   shows only where the light catches it. Over the song the light slowly gets further away. */
+const rain = Array.from({ length: 260 }, () => ({ x: Math.random(), y: Math.random(), v: .5 + Math.random() * .5 }));
 function frameLonely() {
-  drawLonely();
-  const W = vc.width, H = vc.height, M = Math.min(W, H), t = viz.t, B = viz.bass, K = viz.kick;
-  if (lone.prev.width !== W || lone.prev.height !== H) {
-    lone.prev.width = W; lone.prev.height = H;
-    lone.tint.width = Math.ceil(W / 2); lone.tint.height = Math.ceil(H / 2);
-    lone.soft.width = Math.ceil(W / 10); lone.soft.height = Math.ceil(H / 10);
-    lone.drops = Array.from({ length: 16 }, () => ({ x: Math.random(), y: Math.random(), r: .012 + Math.random() * .03, v: .00015 + Math.random() * .0006 }));
-  }
-  // 1. the glass: the picture wavers, band by band
-  bx.globalCompositeOperation = 'source-over'; bx.globalAlpha = 1; bx.fillStyle = '#05070c'; bx.fillRect(0, 0, W, H);
-  const band = Math.max(3, Math.round(M / 240)), amp = M * (.0055 + B * .006);
-  for (let y = 0; y < H; y += band) {
-    const off = Math.sin(y * .018 + t * 1.1) * amp + Math.sin(y * .005 - t * .37) * amp * 1.6;
-    bx.drawImage(vc, 0, y, W, band, off, y, W, band);
-  }
-  // 2. a ghost of the last moment, smeared down like water
+  const W = out.width, H = out.height, M = Math.min(W, H), t = viz.t, B = viz.bass;
+  const p = audio.duration ? clamp(audio.currentTime / audio.duration, 0, 1) : 0;
+  const far = 1 - p * p * (3 - 2 * p) * .55;                                   // the light, drifting away
+  const lx = W / 2, ly = H * .44, gy = H * .62;
+  const r = M * .5 * far * (1 + B * .06);
   ox.globalCompositeOperation = 'source-over'; ox.globalAlpha = 1;
-  ox.drawImage(buf, 0, 0);
-  ox.globalAlpha = .38; ox.drawImage(lone.prev, -M * .002, M * .004, W + M * .004, H);
-  ox.globalAlpha = 1;
-  // 3. the colour splits at the edges: a red copy one way, a blue copy the other
-  const tg = lone.tint.getContext('2d'), tw = lone.tint.width, th = lone.tint.height, split = M * (.0065 + K * .008);
+  const sky = ox.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#04050a'); sky.addColorStop(.62, '#0a0d16'); sky.addColorStop(1, '#030407');
+  ox.fillStyle = sky; ox.fillRect(0, 0, W, H);
   ox.globalCompositeOperation = 'screen';
-  for (const [col, dx] of [['#ff2a10', split], ['#1060ff', -split]]) {
-    tg.globalCompositeOperation = 'copy'; tg.drawImage(buf, 0, 0, tw, th);
-    tg.globalCompositeOperation = 'multiply'; tg.fillStyle = col; tg.fillRect(0, 0, tw, th);
-    ox.globalAlpha = .26; ox.drawImage(lone.tint, dx, 0, W, H);
+  // the glow
+  const g = ox.createRadialGradient(lx, ly, 0, lx, ly, r);
+  g.addColorStop(0, 'rgba(255, 214, 160, .9)'); g.addColorStop(.035, 'rgba(255, 200, 140, .5)'); g.addColorStop(.25, 'rgba(255, 180, 120, .08)'); g.addColorStop(1, 'rgba(255, 170, 110, 0)');
+  ox.fillStyle = g; ox.fillRect(0, 0, W, H);
+  // its reflection on the wet ground: the same light, stretched and quiet
+  const ry = H * .8;
+  ox.save(); ox.translate(lx, ry); ox.scale(.14, .9); ox.translate(-lx, -ry);
+  const rf = ox.createRadialGradient(lx, ry, 0, lx, ry, r * .5);
+  rf.addColorStop(0, 'rgba(255, 200, 140, .16)'); rf.addColorStop(1, 'rgba(255, 190, 130, 0)');
+  ox.fillStyle = rf; ox.fillRect(0, 0, W * 10, H);
+  ox.restore();
+  // fine rain, seen only near the light
+  ox.globalCompositeOperation = 'source-over'; ox.lineWidth = Math.max(1, M / 1100);
+  const reach = r * .55;
+  for (const d of rain) {
+    d.y += .0035 * d.v; d.x -= .0004 * d.v;
+    if (d.y > 1) { d.y = 0; d.x = Math.random(); }
+    const x = d.x * W, y = d.y * H, dist = Math.hypot(x - lx, y - ly);
+    if (dist > reach) continue;
+    const a = (1 - dist / reach) * .35;
+    ox.strokeStyle = `rgba(255, 220, 180, ${a.toFixed(3)})`;
+    ox.beginPath(); ox.moveTo(x, y); ox.lineTo(x + M * .002, y - M * .018); ox.stroke();
   }
-  // 4. bloom: a very soft copy of the light laid back over it
-  const sg = lone.soft.getContext('2d');
-  sg.globalCompositeOperation = 'copy'; sg.drawImage(buf, 0, 0, lone.soft.width, lone.soft.height);
-  ox.globalAlpha = .35 + B * .15; ox.drawImage(lone.soft, 0, 0, W, H);
-  ox.globalAlpha = 1; ox.globalCompositeOperation = 'source-over';
-  // 5. drops on the lens, sliding down slowly; each one shows the scene small and upside down
-  for (const d of lone.drops) {
-    d.y += d.v * (1 + B * 2); if (d.y > 1.1) { d.y = -.1; d.x = Math.random(); }
-    const x = d.x * W, y = d.y * H, r = d.r * M;
-    ox.save(); ox.beginPath(); ox.ellipse(x, y, r, r * 1.15, 0, 0, Math.PI * 2); ox.clip();
-    ox.translate(x, y); ox.scale(-.35, -.35); ox.globalAlpha = .85;
-    ox.drawImage(buf, -x * 1.2, -y * 1.2, W * 1.2, H * 1.2);
-    ox.restore();
-    ox.strokeStyle = 'rgba(200, 215, 235, .18)'; ox.lineWidth = Math.max(1, M / 700);
-    ox.beginPath(); ox.ellipse(x, y, r, r * 1.15, 0, 0, Math.PI * 2); ox.stroke();
-    ox.fillStyle = 'rgba(255, 255, 255, .22)'; ox.beginPath(); ox.ellipse(x - r * .35, y - r * .45, r * .18, r * .12, -.6, 0, Math.PI * 2); ox.fill();
-  }
-  // keep this frame for the ghost
-  const pg = lone.prev.getContext('2d'); pg.globalCompositeOperation = 'copy'; pg.drawImage(buf, 0, 0);   // the plain picture, so the ghost never feeds on itself
 }
 const LOOK = { 0: () => frame(performance.now()), 1: () => frameRender(performance.now()), 2: frameTrip, 3: frameSun, 5: frameLonely };
 
