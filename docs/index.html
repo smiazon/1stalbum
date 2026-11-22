@@ -67,6 +67,15 @@
   .foot { margin: 34px 0 0; font-size: 12px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; }
   #credits { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(0, 0, 0, .7); padding: 16px; }
   #credits[hidden] { display: none; }
+  #devDot { background: none; border: 0; padding: 0 4px; margin-left: auto; color: rgba(239, 230, 216, .22); font-size: 12px; cursor: pointer; }
+  #devDot:hover, body.dev #devDot { color: var(--warm); }
+  #devBox { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(0, 0, 0, .7); padding: 16px; }
+  #devBox[hidden] { display: none; }
+  #devBox .box { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: min(360px, 100%); padding: 18px; border-radius: 16px; background: #17120f; border: 1px solid var(--hair); }
+  #devBox .field { flex: 1; min-width: 120px; letter-spacing: .3em; text-align: center; }
+  #devBox .small { width: 100%; margin: 4px 0 0; font-size: 12.5px; color: var(--soft); min-height: 16px; }
+  .toolbox [data-tool="bucket"] { display: none; }
+  body.dev .toolbox [data-tool="bucket"] { display: grid; }
   #credits .box { width: min(560px, 100%); max-height: 80dvh; overflow: auto; padding: 20px 22px; border-radius: 16px; background: #17120f; border: 1px solid var(--hair); font-size: 12.5px; color: var(--soft); }
   #credits li { margin: 0 0 7px; }
   #credits a { color: var(--ink); }
@@ -218,7 +227,8 @@
 <body>
 <main id="chat" aria-live="polite">
   <div id="thread"></div>
-  <p class="foot"><span id="sigCount"></span><span id="week"></span><span id="peers"></span><button class="link" id="creditsBtn">credits</button></p>
+  <p class="foot"><span id="sigCount"></span><span id="week"></span><span id="peers"></span><button class="link" id="creditsBtn">credits</button><button id="devDot" aria-label="dev">✦</button></p>
+  <div id="devBox" hidden><form class="box" id="devForm"><input class="field" id="devCode" inputmode="numeric" autocomplete="off" placeholder="code" maxlength="12" aria-label="code"><button class="chip" type="submit">enter</button><button class="chip" type="button" id="devClose">close</button><p class="small" id="devMsg"></p></form></div>
   <div id="credits" hidden><div class="box"><p class="line on">credits</p><ul id="creditList"></ul><button class="chip" id="creditsClose">close</button></div></div>
 </main>
 
@@ -234,9 +244,9 @@
   </div>
 </div>
 
-<div id="sheet" aria-label="sign the cover">
+<div id="sheet" aria-label="sign the album art">
   <div class="sheetIn">
-    <div class="sheetHead"><p>everyone who listens is on it.</p><button class="chip" id="done">done</button></div>
+    <div class="sheetHead"><span></span><button class="chip" id="done">done</button></div>
     <div class="sleeve" id="sleeve">
       <span class="emboss title">new music every friday</span>
       <span class="emboss serial" id="serial">no. 0000001</span>
@@ -248,6 +258,7 @@
     <button data-tool="brush" class="on" title="paint" aria-label="paint"><img alt=""></button>
     <button data-tool="text" title="write" aria-label="write"><img alt=""></button>
     <button data-tool="sticker" title="stickers" aria-label="stickers"><img alt=""></button>
+    <button data-tool="bucket" title="fill" aria-label="fill"><img alt=""></button>
     <span class="gap"></span>
     <button id="undo" title="undo" aria-label="undo" disabled><img alt=""></button>
     <button id="clear" title="start over" aria-label="start over" disabled><img alt=""></button>
@@ -266,6 +277,10 @@
       </div>
       <div class="row"><div class="seg fonts" id="fonts" aria-label="handwriting"></div><div class="seg" id="textSizes" aria-label="size"></div></div>
       <div class="row"><div class="swatches" data-colors></div><span class="hintline" id="textLeft"></span></div>
+    </div>
+    <div class="pane" data-pane="bucket">
+      <div class="swatches" data-colors></div>
+      <span class="hintline">dev · tap a part of the album to fill it</span>
     </div>
     <div class="pane" data-pane="sticker">
       <div class="stickers" id="stickers" aria-label="stickers"></div>
@@ -381,6 +396,10 @@ const ICON = {
     'kkkkkkkkkkkkkkk.', 'k..kwwwwwwwk..kk', 'k..kwwwkkwwk...k', 'k..kwwwkkwwk...k', 'k..kwwwwwwwk...k', 'k..kkkkkkkkk...k',
     'k..............k', 'k..kkkkkkkkkk..k', 'k..kwwwwwwwwk..k', 'k..kwwwwwwwwk..k', 'k..kwwwwwwwwk..k', 'k..kwwwwwwwwk..k',
     'k..kwwwwwwwwk..k', 'kkkkkkkkkkkkkkkk']),
+  bucket: bits([
+    '.....kk.........', '....k..k........', '...k....k.......', '..kkkkkkkk......', '.kk......kk.....', 'k.k......k.k....',
+    'k..k....k..kk...', 'k...k..k...kkk..', 'k....kk....kkkk.', '.k........k.kkk.', '..k......k..kk..', '...k....k...kk..',
+    '....k..k....k...', '.....kk.........', '................', '................']),
   arrow: bits([
     'k..........', 'kk.........', 'kwk........', 'kwwk.......', 'kwwwk......', 'kwwwwk.....', 'kwwwwwk....', 'kwwwwwwk...',
     'kwwwwwwwk..', 'kwwwwwwwwk.', 'kwwwwwkkkkk', 'kwwkwwk....', 'kwk.kwwk...', 'kk..kwwk...', 'k....kwwk..', '.....kwwk..', '......kk...']),
@@ -469,10 +488,9 @@ function buildThread(animate) {
     ol.append(li);
   });
   L.push(ol);
-  L.push(el('p', 'line', 'one more thing. everyone who listens signs the cover. you should too.'));
   const cover = el('div', 'line cover');
   const thumb = el('canvas'); thumb.id = 'coverThumb'; thumb.width = thumb.height = 192; thumb.title = 'the cover'; thumb.onclick = () => openSheet(true);
-  const sign = el('button', 'act ghost', 'sign the cover'); sign.onclick = () => openSheet(true);
+  const sign = el('button', 'act ghost', 'sign the album art'); sign.onclick = () => openSheet(true);
   cover.append(thumb, sign); L.push(cover);
   L.push(el('p', 'line small', `<button class="link" id="mikoLink">miko</button> says hi.`));
   L.forEach((x) => thread.append(x));
@@ -798,6 +816,24 @@ function frameSun() {
   ox.globalCompositeOperation = 'source-over';
   ox.fillStyle = '#000'; const bar = H * .055; ox.fillRect(0, 0, W, bar); ox.fillRect(0, H - bar, W, bar);
 }
+// the dev door: a faint star at the end of the last line. The code is checked by the database, not here.
+let devCode = null;
+try { devCode = localStorage.getItem('devcode'); } catch {}
+const devOn = () => { document.body.classList.add('dev'); $('contact').placeholder = 'dev · no email needed'; };
+if (devCode) devOn();
+$('devDot').onclick = () => { $('devBox').hidden = false; $('devMsg').textContent = devCode ? 'dev tools are on. the bucket is in the signing tools.' : ''; setTimeout(() => $('devCode').focus(), 50); };
+$('devClose').onclick = () => { $('devBox').hidden = true; };
+$('devForm').onsubmit = async (e) => {
+  e.preventDefault();
+  const code = $('devCode').value.trim();
+  try {
+    if (await rpc('dev_check', { p_code: code })) {
+      devCode = code; try { localStorage.setItem('devcode', code); } catch {}
+      devOn(); $('devMsg').textContent = 'dev tools on. open sign the album art: the bucket is next to the stickers.'; $('devCode').value = '';
+    } else $('devMsg').textContent = 'no.';
+  } catch (err) { $('devMsg').textContent = err.message; }
+};
+
 // who made the footage (the licences ask us to say so)
 $('creditsBtn').onclick = async () => {
   const list = $('creditList'); list.innerHTML = '';
@@ -818,8 +854,8 @@ $('creditsClose').onclick = () => { $('credits').hidden = true; };
 const rain = Array.from({ length: 420 }, () => ({ x: Math.random(), y: Math.random(), v: .6 + Math.random() * .7, l: .6 + Math.random() * .8 }));
 const splashes = [];
 let flick = 1;
-function frameLonely() {
-  const W = out.width, H = out.height, M = Math.min(W, H), t = viz.t, B = viz.bass, Hi = viz.high, K = viz.kick;
+function drawLonely() {                                       // the scene itself, drawn clean, offstage
+  const W = vc.width, H = vc.height, M = Math.min(W, H), t = viz.t, B = viz.bass, Hi = viz.high, K = viz.kick;
   const p = audio.duration ? clamp(audio.currentTime / audio.duration, 0, 1) : 0;
   const ease = p * p * (3 - 2 * p), s = 1.6 - ease * .75;                       // closer at first, then further and further away
   const gy = H * .8, lx = W * .55, top = gy - M * .56, head = { x: lx - M * .075, y: top + M * .02 };
@@ -827,69 +863,123 @@ function frameLonely() {
   if (Math.random() < .004 + K * .01) flick = .35 + Math.random() * .3;
   flick += (1 - flick) * .08;
   const glow = flick * (.92 + Math.sin(t * 2.3) * .03);
-  ox.globalCompositeOperation = 'source-over'; ox.globalAlpha = 1;
-  const sky = ox.createLinearGradient(0, 0, 0, H);
+  vx.globalCompositeOperation = 'source-over'; vx.globalAlpha = 1;
+  const sky = vx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, '#05070c'); sky.addColorStop(.62, '#0d121c'); sky.addColorStop(.8, '#121825'); sky.addColorStop(.801, '#07090e'); sky.addColorStop(1, '#040507');
-  ox.fillStyle = sky; ox.fillRect(0, 0, W, H);
-  ox.save();
-  ox.translate(lx, gy); ox.scale(s, s); ox.translate(-lx, -gy);
+  vx.fillStyle = sky; vx.fillRect(0, 0, W, H);
+  vx.save();
+  vx.translate(lx, gy); vx.scale(s, s); vx.translate(-lx, -gy);
   const warm = (a) => `rgba(255, 206, 150, ${a})`;
   // the light falling from the lamp, and the pool it makes on the wet street
-  ox.globalCompositeOperation = 'screen';
-  const cone = ox.createLinearGradient(0, head.y, 0, gy);
+  vx.globalCompositeOperation = 'screen';
+  const cone = vx.createLinearGradient(0, head.y, 0, gy);
   cone.addColorStop(0, warm(.2 * glow)); cone.addColorStop(1, warm(.05 * glow));
-  ox.fillStyle = cone; ox.beginPath(); ox.moveTo(head.x - M * .012, head.y); ox.lineTo(head.x + M * .012, head.y); ox.lineTo(head.x + M * .19, gy); ox.lineTo(head.x - M * .19, gy); ox.closePath(); ox.fill();
-  const pool = ox.createRadialGradient(head.x, gy, 0, head.x, gy, M * .3);
+  vx.fillStyle = cone; vx.beginPath(); vx.moveTo(head.x - M * .012, head.y); vx.lineTo(head.x + M * .012, head.y); vx.lineTo(head.x + M * .19, gy); vx.lineTo(head.x - M * .19, gy); vx.closePath(); vx.fill();
+  const pool = vx.createRadialGradient(head.x, gy, 0, head.x, gy, M * .3);
   pool.addColorStop(0, warm(.32 * glow)); pool.addColorStop(1, warm(0));
-  ox.save(); ox.translate(head.x, gy); ox.scale(1, .18); ox.translate(-head.x, -gy); ox.fillStyle = pool; ox.fillRect(head.x - M * .4, gy - M * .4, M * .8, M * .8); ox.restore();
+  vx.save(); vx.translate(head.x, gy); vx.scale(1, .18); vx.translate(-head.x, -gy); vx.fillStyle = pool; vx.fillRect(head.x - M * .4, gy - M * .4, M * .8, M * .8); vx.restore();
   // its reflection, shivering in a puddle
   for (let i = 0; i < 14; i++) {
     const y = gy + M * (.012 + i * .011), wob = Math.sin(t * 3 + i * 1.7) * M * .006 * (1 + B), w = M * (.02 - i * .0011) * (1 + Math.sin(t * 5 + i) * .2);
-    ox.fillStyle = warm((.22 - i * .014) * glow); ox.fillRect(head.x - w / 2 + wob, y, w, M * .006);
+    vx.fillStyle = warm((.22 - i * .014) * glow); vx.fillRect(head.x - w / 2 + wob, y, w, M * .006);
   }
-  const halo = ox.createRadialGradient(head.x, head.y, 0, head.x, head.y, M * .11);
+  const halo = vx.createRadialGradient(head.x, head.y, 0, head.x, head.y, M * .11);
   halo.addColorStop(0, warm(.9 * glow)); halo.addColorStop(.15, warm(.45 * glow)); halo.addColorStop(1, warm(0));
-  ox.fillStyle = halo; ox.fillRect(head.x - M * .12, head.y - M * .12, M * .24, M * .24);
+  vx.fillStyle = halo; vx.fillRect(head.x - M * .12, head.y - M * .12, M * .24, M * .24);
   // the lamppost
-  ox.globalCompositeOperation = 'source-over';
-  ox.strokeStyle = '#020305'; ox.lineCap = 'round'; ox.lineWidth = M * .008;
-  ox.beginPath(); ox.moveTo(lx, gy); ox.lineTo(lx, top + M * .03); ox.quadraticCurveTo(lx, top - M * .005, lx - M * .03, top); ox.lineTo(head.x + M * .005, top + M * .004); ox.stroke();
-  ox.fillStyle = '#020305'; ox.beginPath(); ox.moveTo(head.x - M * .018, head.y); ox.lineTo(head.x + M * .018, head.y); ox.lineTo(head.x + M * .01, head.y - M * .014); ox.lineTo(head.x - M * .01, head.y - M * .014); ox.closePath(); ox.fill();
-  ox.fillStyle = warm(Math.min(1, glow)); ox.fillRect(head.x - M * .011, head.y - M * .002, M * .022, M * .004);
+  vx.globalCompositeOperation = 'source-over';
+  vx.strokeStyle = '#020305'; vx.lineCap = 'round'; vx.lineWidth = M * .008;
+  vx.beginPath(); vx.moveTo(lx, gy); vx.lineTo(lx, top + M * .03); vx.quadraticCurveTo(lx, top - M * .005, lx - M * .03, top); vx.lineTo(head.x + M * .005, top + M * .004); vx.stroke();
+  vx.fillStyle = '#020305'; vx.beginPath(); vx.moveTo(head.x - M * .018, head.y); vx.lineTo(head.x + M * .018, head.y); vx.lineTo(head.x + M * .01, head.y - M * .014); vx.lineTo(head.x - M * .01, head.y - M * .014); vx.closePath(); vx.fill();
+  vx.fillStyle = warm(Math.min(1, glow)); vx.fillRect(head.x - M * .011, head.y - M * .002, M * .022, M * .004);
   // someone, standing in the light, hands in their pockets
   const fx = head.x + M * .035, fh = M * .085, sway = Math.sin(t * .6) * M * .0012;
-  ox.fillStyle = '#030406';
-  ox.beginPath(); ox.ellipse(fx + sway, gy - fh * .9, fh * .085, fh * .1, 0, 0, Math.PI * 2); ox.fill();
-  ox.beginPath();
-  ox.moveTo(fx - fh * .13 + sway, gy - fh * .78); ox.quadraticCurveTo(fx - fh * .17, gy - fh * .4, fx - fh * .12, gy - fh * .3);
-  ox.lineTo(fx - fh * .08, gy); ox.lineTo(fx - fh * .02, gy); ox.lineTo(fx, gy - fh * .28); ox.lineTo(fx + fh * .03, gy); ox.lineTo(fx + fh * .09, gy);
-  ox.lineTo(fx + fh * .12, gy - fh * .3); ox.quadraticCurveTo(fx + fh * .17, gy - fh * .4, fx + fh * .13 + sway, gy - fh * .78); ox.closePath(); ox.fill();
-  ox.fillStyle = 'rgba(255, 206, 150, .18)'; ox.fillRect(fx - fh * .13 + sway, gy - fh * .78, fh * .03, fh * .4);     // the lamp catching one shoulder
+  vx.fillStyle = '#030406';
+  vx.beginPath(); vx.ellipse(fx + sway, gy - fh * .9, fh * .085, fh * .1, 0, 0, Math.PI * 2); vx.fill();
+  vx.beginPath();
+  vx.moveTo(fx - fh * .13 + sway, gy - fh * .78); vx.quadraticCurveTo(fx - fh * .17, gy - fh * .4, fx - fh * .12, gy - fh * .3);
+  vx.lineTo(fx - fh * .08, gy); vx.lineTo(fx - fh * .02, gy); vx.lineTo(fx, gy - fh * .28); vx.lineTo(fx + fh * .03, gy); vx.lineTo(fx + fh * .09, gy);
+  vx.lineTo(fx + fh * .12, gy - fh * .3); vx.quadraticCurveTo(fx + fh * .17, gy - fh * .4, fx + fh * .13 + sway, gy - fh * .78); vx.closePath(); vx.fill();
+  vx.fillStyle = 'rgba(255, 206, 150, .18)'; vx.fillRect(fx - fh * .13 + sway, gy - fh * .78, fh * .03, fh * .4);     // the lamp catching one shoulder
   // the rain: grey in the dark, gold where the light catches it
   const fall = .006 + B * .006;
-  ox.lineWidth = Math.max(1, M / 900);
+  vx.lineWidth = Math.max(1, M / 900);
   for (const d of rain) {
     d.y += fall * d.v; d.x -= fall * d.v * .14;
     if (d.y > 1) { if (Math.abs(d.x * W - head.x) < M * .2 && Math.random() < .5) splashes.push({ x: d.x * W, t0: t }); d.y = -.02; d.x = Math.random() * 1.1; }
     const x = d.x * W, y = d.y * (gy - 0) , len = M * .024 * d.l;
     const inLight = Math.max(0, 1 - Math.abs(x - head.x) / (M * (.03 + .17 * Math.max(0, (y - head.y) / (gy - head.y))))) * (y > head.y ? 1 : 0);
     const a = .05 + inLight * (.5 + Hi * .3) * glow;
-    ox.strokeStyle = inLight > .05 ? `rgba(255, 214, 165, ${a.toFixed(3)})` : `rgba(150, 170, 200, ${a.toFixed(3)})`;
-    ox.beginPath(); ox.moveTo(x, y); ox.lineTo(x + len * .14, y - len); ox.stroke();
+    vx.strokeStyle = inLight > .05 ? `rgba(255, 214, 165, ${a.toFixed(3)})` : `rgba(150, 170, 200, ${a.toFixed(3)})`;
+    vx.beginPath(); vx.moveTo(x, y); vx.lineTo(x + len * .14, y - len); vx.stroke();
   }
   for (let i = splashes.length - 1; i >= 0; i--) {                                    // little rings where it lands in the light
     const sp = splashes[i], a = t - sp.t0;
     if (a > .5) { splashes.splice(i, 1); continue; }
-    ox.strokeStyle = warm((.35 * (1 - a / .5) * glow).toFixed(3));
-    ox.beginPath(); ox.ellipse(sp.x, gy + M * .004, M * (.003 + a * .02), M * (.001 + a * .004), 0, 0, Math.PI * 2); ox.stroke();
+    vx.strokeStyle = warm((.35 * (1 - a / .5) * glow).toFixed(3));
+    vx.beginPath(); vx.ellipse(sp.x, gy + M * .004, M * (.003 + a * .02), M * (.001 + a * .004), 0, 0, Math.PI * 2); vx.stroke();
   }
-  ox.restore();
+  vx.restore();
   // the dark closing in at the edges
-  ox.globalCompositeOperation = 'multiply';
-  const vig = ox.createRadialGradient(lx, gy - M * .2, M * .2, lx, gy - M * .2, Math.hypot(W, H) * .65);
+  vx.globalCompositeOperation = 'multiply';
+  const vig = vx.createRadialGradient(lx, gy - M * .2, M * .2, lx, gy - M * .2, Math.hypot(W, H) * .65);
   vig.addColorStop(0, 'rgb(255,255,255)'); vig.addColorStop(1, 'rgb(25,28,38)');
-  ox.fillStyle = vig; ox.fillRect(0, 0, W, H);
-  ox.globalCompositeOperation = 'source-over';
+  vx.fillStyle = vig; vx.fillRect(0, 0, W, H);
+  vx.globalCompositeOperation = 'source-over';
+}
+
+// ...and then seen the way it feels: through wet glass, with an old lens. The picture wavers in
+// bands, keeps a ghost of itself, splits at the edges into red and blue, blooms, and big drops
+// slide down in front of it, each one holding a small upside-down copy of the light.
+const lone = { prev: document.createElement('canvas'), tint: document.createElement('canvas'), soft: document.createElement('canvas'), drops: [] };
+function frameLonely() {
+  drawLonely();
+  const W = vc.width, H = vc.height, M = Math.min(W, H), t = viz.t, B = viz.bass, K = viz.kick;
+  if (lone.prev.width !== W || lone.prev.height !== H) {
+    lone.prev.width = W; lone.prev.height = H;
+    lone.tint.width = Math.ceil(W / 2); lone.tint.height = Math.ceil(H / 2);
+    lone.soft.width = Math.ceil(W / 10); lone.soft.height = Math.ceil(H / 10);
+    lone.drops = Array.from({ length: 16 }, () => ({ x: Math.random(), y: Math.random(), r: .012 + Math.random() * .03, v: .00015 + Math.random() * .0006 }));
+  }
+  // 1. the glass: the picture wavers, band by band
+  bx.globalCompositeOperation = 'source-over'; bx.globalAlpha = 1; bx.fillStyle = '#05070c'; bx.fillRect(0, 0, W, H);
+  const band = Math.max(3, Math.round(M / 240)), amp = M * (.0055 + B * .006);
+  for (let y = 0; y < H; y += band) {
+    const off = Math.sin(y * .018 + t * 1.1) * amp + Math.sin(y * .005 - t * .37) * amp * 1.6;
+    bx.drawImage(vc, 0, y, W, band, off, y, W, band);
+  }
+  // 2. a ghost of the last moment, smeared down like water
+  ox.globalCompositeOperation = 'source-over'; ox.globalAlpha = 1;
+  ox.drawImage(buf, 0, 0);
+  ox.globalAlpha = .38; ox.drawImage(lone.prev, -M * .002, M * .004, W + M * .004, H);
+  ox.globalAlpha = 1;
+  // 3. the colour splits at the edges: a red copy one way, a blue copy the other
+  const tg = lone.tint.getContext('2d'), tw = lone.tint.width, th = lone.tint.height, split = M * (.0065 + K * .008);
+  ox.globalCompositeOperation = 'screen';
+  for (const [col, dx] of [['#ff2a10', split], ['#1060ff', -split]]) {
+    tg.globalCompositeOperation = 'copy'; tg.drawImage(buf, 0, 0, tw, th);
+    tg.globalCompositeOperation = 'multiply'; tg.fillStyle = col; tg.fillRect(0, 0, tw, th);
+    ox.globalAlpha = .26; ox.drawImage(lone.tint, dx, 0, W, H);
+  }
+  // 4. bloom: a very soft copy of the light laid back over it
+  const sg = lone.soft.getContext('2d');
+  sg.globalCompositeOperation = 'copy'; sg.drawImage(buf, 0, 0, lone.soft.width, lone.soft.height);
+  ox.globalAlpha = .35 + B * .15; ox.drawImage(lone.soft, 0, 0, W, H);
+  ox.globalAlpha = 1; ox.globalCompositeOperation = 'source-over';
+  // 5. drops on the lens, sliding down slowly; each one shows the scene small and upside down
+  for (const d of lone.drops) {
+    d.y += d.v * (1 + B * 2); if (d.y > 1.1) { d.y = -.1; d.x = Math.random(); }
+    const x = d.x * W, y = d.y * H, r = d.r * M;
+    ox.save(); ox.beginPath(); ox.ellipse(x, y, r, r * 1.15, 0, 0, Math.PI * 2); ox.clip();
+    ox.translate(x, y); ox.scale(-.35, -.35); ox.globalAlpha = .85;
+    ox.drawImage(buf, -x * 1.2, -y * 1.2, W * 1.2, H * 1.2);
+    ox.restore();
+    ox.strokeStyle = 'rgba(200, 215, 235, .18)'; ox.lineWidth = Math.max(1, M / 700);
+    ox.beginPath(); ox.ellipse(x, y, r, r * 1.15, 0, 0, Math.PI * 2); ox.stroke();
+    ox.fillStyle = 'rgba(255, 255, 255, .22)'; ox.beginPath(); ox.ellipse(x - r * .35, y - r * .45, r * .18, r * .12, -.6, 0, Math.PI * 2); ox.fill();
+  }
+  // keep this frame for the ghost
+  const pg = lone.prev.getContext('2d'); pg.globalCompositeOperation = 'copy'; pg.drawImage(buf, 0, 0);   // the plain picture, so the ghost never feeds on itself
 }
 const LOOK = { 0: () => frame(performance.now()), 1: () => frameRender(performance.now()), 2: frameTrip, 3: frameSun, 5: frameLonely };
 
@@ -1182,9 +1272,27 @@ function strokePath(g, s, W) {
   g.stroke();
 }
 const handFont = (m, W) => `${m.z * W / 1000}px '${HANDS[m.f] || HANDS[0]}', cursive`;
+// a fill: everything connected to the tapped point that looks like it, in one colour (dev tools only)
+function floodFill(g, W, fx, fy, color) {
+  const x0 = Math.floor(fx), y0 = Math.floor(fy), H = g.canvas.height;
+  if (x0 < 0 || y0 < 0 || x0 >= W || y0 >= H) return;
+  const img = g.getImageData(0, 0, W, H), d = new Uint32Array(img.data.buffer), s0 = d[y0 * W + x0];
+  const sr = s0 & 255, sg = (s0 >> 8) & 255, sb = (s0 >> 16) & 255, sa = s0 >>> 24;
+  const like = (v) => Math.abs((v & 255) - sr) + Math.abs(((v >> 8) & 255) - sg) + Math.abs(((v >> 16) & 255) - sb) + Math.abs((v >>> 24) - sa) * 1.5 <= 70;
+  const [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16)), fill = ((255 << 24) | (cb << 16) | (cg << 8) | cr) >>> 0;
+  const seen = new Uint8Array(W * H), stack = [y0 * W + x0], done = [];
+  seen[y0 * W + x0] = 1;
+  while (stack.length) {
+    const i = stack.pop(), px = i % W; done.push(i);
+    for (const n of [px > 0 ? i - 1 : -1, px < W - 1 ? i + 1 : -1, i - W, i + W]) if (n >= 0 && n < W * H && !seen[n] && like(d[n])) { seen[n] = 1; stack.push(n); }
+  }
+  for (const i of done) { d[i] = fill; const px = i % W; for (const n of [px > 0 ? i - 1 : -1, px < W - 1 ? i + 1 : -1, i - W, i + W]) if (n >= 0 && n < W * H && !seen[n]) { seen[n] = 1; d[n] = fill; } }   // and over the soft edge
+  g.putImageData(img, 0, 0);
+}
 function drawMark(g, m, W) {
   const k = W / 1000;
   if (isStroke(m)) { g.globalAlpha = .9; strokePath(g, m, W); return; }
+  if (m.k === 'fl') { floodFill(g, W, m.x * k, m.y * k, m.c); return; }
   g.save();
   g.translate(m.x * k, m.y * k);
   if (m.k === 'tx') {
@@ -1225,10 +1333,14 @@ function fitCanvas() {
   canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
   redraw();
 }
+const base = document.createElement('canvas');
+let baseKey = '';
 function redraw() {
-  const W = canvas.width;
+  const W = canvas.width, key = `${W}:${paintings.length}:${entries.length}:${paintings.at(-1)?.id || ''}:${entries.at(-1)?.id || ''}`;
+  if (key !== baseKey) { base.width = base.height = W; const bg = base.getContext('2d', { willReadFrequently: true }); bg.clearRect(0, 0, W, W); paintAlbum(bg, W, false); baseKey = key; }
   ctx.clearRect(0, 0, W, W);
-  paintAlbum(ctx, W);
+  ctx.drawImage(base, 0, 0);
+  mine.forEach((m) => drawMark(ctx, m, W)); if (cur) drawMark(ctx, cur, W); if (ghost) drawName(ctx, ghost, W); ctx.globalAlpha = 1;
   if (sel && pen.tool !== 'brush') {                    // the marching ants around what you're moving
     const b = boxOf(sel), k = W / 1000;
     ctx.save(); ctx.setLineDash([4 * k * 1.5, 4 * k * 1.5]); ctx.lineWidth = Math.max(1, k * 1.5); ctx.strokeStyle = '#000';
@@ -1247,7 +1359,7 @@ function boxOf(m) {
   return { x0: m.x - w, y0: m.y - h, x1: m.x + w, y1: m.y + h };
 }
 const inBox = (b, x, y, pad = 8) => x >= b.x0 - pad && x <= b.x1 + pad && y >= b.y0 - pad && y <= b.y1 + pad;
-const myMarkAt = (x, y) => [...mine].reverse().find((m) => m.k && inBox(boxOf(m), x, y));
+const myMarkAt = (x, y) => [...mine].reverse().find((m) => (m.k === 'tx' || m.k === 'st') && inBox(boxOf(m), x, y));
 
 const toUnits = (e) => {
   const r = sleeve.getBoundingClientRect();
@@ -1263,6 +1375,7 @@ sleeve.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();   // put the keyboard away
   const [x, y] = toUnits(e);
+  if (pen.tool === 'bucket') { mine.push({ k: 'fl', c: pen.color, x, y }); redraw(); updateTools(); return; }
   if (pen.tool !== 'brush') {
     let m = myMarkAt(x, y);
     if (!m) m = pen.tool === 'text' ? addWord(x, y) : addSticker(x, y);
@@ -1343,6 +1456,7 @@ function drawGhost() {
 function paintingAt(x, y) {
   for (let k = paintings.length - 1; k >= 0; k--) {
     for (const s of paintings[k].strokes) {
+      if (s.k === 'fl') continue;
       if (!isStroke(s)) { if (inBox(boxOf(s), x, y, 0)) return paintings[k]; continue; }
       const p = s.p, reach = s.s / 2 + 8;
       for (let i = 0; i < p.length; i += 2) {
@@ -1444,12 +1558,15 @@ $('signForm').addEventListener('submit', async (e) => {
       entries.push(s);
     } else {
       if (!mine.length) throw new Error('paint, write or stick something first.');
-      if (!ADMIN_KEY && !$('name').value.trim()) { $('name').focus(); throw new Error('add your name.'); }
-      if (!ADMIN_KEY && !$('contact').value.trim()) { $('contact').focus(); throw new Error('add your email or phone. only we see it.'); }
+      if (!ADMIN_KEY && !devCode && !$('name').value.trim()) { $('name').focus(); throw new Error('add your name.'); }
+      if (!ADMIN_KEY && !devCode && !$('contact').value.trim()) { $('contact').focus(); throw new Error('add your email or phone. only we see it.'); }
       say('signing…', 0);
-      const d = ADMIN_KEY
+      const d = devCode
+        ? await rpc('dev_draw', { p_code: devCode, p_strokes: mine, p_name: $('name').value })
+        : ADMIN_KEY
         ? await rpc('artist_draw', { p_key: ADMIN_KEY, p_strokes: mine, p_name: $('name').value })
         : await rpc('draw', { p_name: $('name').value, p_contact: $('contact').value, p_strokes: mine });
+      if (!d) throw new Error('dev tools are locked again. enter the code.');
       paintings.push(d); mine = []; sel = null;
     }
     e.target.reset();

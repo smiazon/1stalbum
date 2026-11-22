@@ -249,7 +249,7 @@ begin
   for st in select value from jsonb_array_elements(p) loop
     if jsonb_typeof(st) <> 'object' then raise exception 'bad stroke'; end if;
     kind := st->>'k';
-    if kind in ('tx', 'st') then
+    if kind in ('tx', 'st', 'fl') then
       if coalesce(jsonb_typeof(st->'x'), '') <> 'number' or coalesce(jsonb_typeof(st->'y'), '') <> 'number' then raise exception 'bad stroke'; end if;
     end if;
 
@@ -278,6 +278,15 @@ begin
         'x', greatest(0, least(1000, round((st->>'x')::numeric)))::int,
         'y', greatest(0, least(1000, round((st->>'y')::numeric)))::int,
         'z', case when (st->>'z') in ('60', '100', '160') then (st->>'z')::int else 100 end));
+
+    elsif kind = 'fl' then                                -- a fill: only through the dev tools (dev_draw turns it on)
+      if coalesce(current_setting('app.allow_fill', true), '') <> 'on' then raise exception 'bad stroke'; end if;
+      col := st->>'c';
+      if col is null or col !~ '^#[0-9a-fA-F]{6}$' then raise exception 'unknown colour'; end if;
+      clean := clean || jsonb_build_array(jsonb_build_object(
+        'k', 'fl', 'c', col,
+        'x', greatest(0, least(1000, round((st->>'x')::numeric)))::int,
+        'y', greatest(0, least(1000, round((st->>'y')::numeric)))::int));
 
     elsif kind is null then                               -- a brush stroke
       col := st->>'c';
@@ -565,6 +574,49 @@ revoke insert, update, delete on public.signatures from anon, authenticated;
 revoke insert, update, delete on public.drawings from anon, authenticated;
 
 -- Your owner key (keep it secret): run   select admin_key from private.settings;
+
+
+-- ---------- dev tools ----------
+-- A code (kept here, never in the page) opens the dev tools: fills, no email, no daily limit.
+-- Wrong guesses are counted per network and capped at 12 an hour.
+alter table private.settings add column if not exists dev_code text;            -- set it in the SQL editor, never in this file: update private.settings set dev_code = '...';
+create table if not exists private.dev_tries (at timestamptz not null default now(), ip_hash text);
+alter table private.dev_tries enable row level security;
+
+create or replace function private.dev_ok(p_code text) returns boolean
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare ip text := private.client_ip(); ih text := case when ip is null then null else encode(digest(ip, 'sha256'), 'hex') end;
+begin
+  if (select count(*) from private.dev_tries where ip_hash is not distinct from ih and at > now() - interval '1 hour') >= 12 then
+    raise exception 'too many tries. try again later.';
+  end if;
+  if p_code is not null and p_code = (select dev_code from private.settings where dev_code is not null) then return true; end if;
+  insert into private.dev_tries (ip_hash) values (ih);
+  return false;
+end $$;
+
+create or replace function public.dev_check(p_code text) returns boolean
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+begin
+  return private.dev_ok(p_code);
+end $$;
+
+-- sign with the dev tools; returns null (rather than an error, so the miss is counted) if the code is wrong
+create or replace function public.dev_draw(p_code text, p_strokes jsonb, p_name text default null) returns public.drawings
+language plpgsql security definer set search_path = public, private, extensions, pg_temp as $$
+declare cs record; r public.drawings; n text := left(btrim(regexp_replace(coalesce(p_name, ''), '\s+', ' ', 'g')), 32);
+begin
+  if not private.dev_ok(p_code) then return null; end if;
+  perform set_config('app.allow_fill', 'on', true);
+  select * into cs from private.clean_strokes(p_strokes);
+  insert into public.drawings (strokes) values (cs.strokes) returning * into r;
+  insert into private.contacts (drawing_id, name, contact, day, owner)
+  values (r.id, coalesce(nullif(n, ''), 'us'), (select owner_email from private.settings), private.today(), true);
+  return r;
+end $$;
+
+grant execute on function public.dev_check(text) to anon, authenticated;
+grant execute on function public.dev_draw(text, jsonb, text) to anon, authenticated;
 
 -- ---------- Supabase only: run the nightly snapshot at 3:17 am Eastern (07:17 UTC) ----------
 create extension if not exists pg_cron;
