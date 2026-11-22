@@ -99,6 +99,7 @@
          display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 12px; border-radius: 999px; background: rgba(10, 9, 9, .55); border: 1px solid rgba(255, 255, 255, .08);
          -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: opacity .5s; }
   #listen.sleepy .bar { opacity: 0; }
+  #clipCredit { position: absolute; z-index: 2; right: 12px; top: max(10px, env(safe-area-inset-top)); margin: 0; font-size: 10px; color: rgba(255, 255, 255, .38); max-width: 70vw; text-align: right; pointer-events: none; }
   .bar .mid { flex: 1; min-width: 0; }
   .bar .title { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
   .bar .time { font-size: 12px; color: var(--soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -227,15 +228,15 @@
 <body>
 <main id="chat" aria-live="polite">
   <div id="thread"></div>
-  <p class="foot"><span id="sigCount"></span><span id="week"></span><span id="peers"></span><button class="link" id="creditsBtn">credits</button><button id="devDot" aria-label="dev">✦</button></p>
+  <p class="foot"><span id="sigCount"></span><span id="week"></span><button id="devDot" aria-label="dev">✦</button></p>
   <div id="devBox" hidden><form class="box" id="devForm"><input class="field" id="devCode" inputmode="numeric" autocomplete="off" placeholder="code" maxlength="12" aria-label="code"><button class="chip" type="submit">enter</button><button class="chip" type="button" id="devClose">close</button><p class="small" id="devMsg"></p></form></div>
-  <div id="credits" hidden><div class="box"><p class="line on">credits</p><ul id="creditList"></ul><button class="chip" id="creditsClose">close</button></div></div>
 </main>
 
 <button id="now" aria-label="back to the song"><span class="t" id="nowTitle"></span><span class="time" id="nowTime"></span>
   <span class="pp sm" id="nowPlay" role="button" aria-label="pause"><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="9.4" y="2" width="3.6" height="12" rx="1" fill="currentColor"/></svg></span></button>
 
 <div id="listen" aria-hidden="true">
+  <p id="clipCredit"></p>
   <div class="bar">
     <button class="pp" id="lPlay" aria-label="pause"><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.8v12.4c0 .6.7 1 1.2.7l10-6.2a.8.8 0 0 0 0-1.4l-10-6.2C3.7.8 3 1.2 3 1.8z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="2" width="3.6" height="12" rx="1" fill="currentColor"/><rect x="9.4" y="2" width="3.6" height="12" rx="1" fill="currentColor"/></svg></button>
     <div class="mid"><span class="title" id="lTitle"></span><div class="seek" id="lSeek" aria-label="song position"><i></i></div></div>
@@ -471,7 +472,6 @@ function buildThread(animate) {
     const b = el('button', 'act', `<span class="ring">${PLAY_SVG}</span>play it`); b.onclick = () => play(i);
     acts.append(b); L.push(acts);
   } else L.push(el('p', 'line', 'the first one comes friday.'));
-  const peers = el('p', 'line small'); peers.id = 'peersLine'; peers.hidden = !others; peers.textContent = peersText; L.push(peers);
   if (out < SONGS.length) L.push(el('p', 'line', `the next one comes in <span id="next"></span>.`));
   // all twelve, one at the top: the ones that are out play; the rest wait, empty
   L.push(el('p', 'line', 'all twelve:'));
@@ -523,7 +523,6 @@ function tick() {
   if (shown >= 0 && out !== shown) buildThread(false);        // a new song arrived while you were here
   shown = out;
   if ($('next') && out < SONGS.length) $('next').textContent = spelled(SONGS[out].t - t);
-  $('peers').textContent = others ? `${others + 1} here now` : '';
   windowTick(t);
 }
 const markPlaying = () => thread.querySelectorAll('.songs li').forEach((li) => li.classList.toggle('playing', +li.dataset.i === playingIdx && !audio.paused));
@@ -552,6 +551,7 @@ function togglePlay() { if (playingIdx < 0) return; if (audio.paused || audio.en
 function listen(on) {
   if (on && !document.body.classList.contains('listening')) { sizeViz(); vx.fillStyle = ox.fillStyle = '#000'; vx.fillRect(0, 0, vc.width, vc.height); ox.fillRect(0, 0, out.width, out.height); wake(); }
   document.body.classList.toggle('listening', on);
+  creditFor(null);
   document.body.classList.toggle('gl-song', playingIdx === 2);
   if (on && playingIdx === 2) tripStart(); else tripStop();
   if (!on || playingIdx !== 3) sun.clips.forEach((c) => c.el && !c.el.paused && c.el.pause());
@@ -705,7 +705,7 @@ function frameTrip(dt) {
   if (tripCanvas.width !== W || tripCanvas.height !== H) { tripCanvas.width = W; tripCanvas.height = H; gl.viewport(0, 0, W, H); }
   if (trip.next) {
     trip.fade += dt / trip.fadeDur;
-    if (trip.fade >= 1) { const old = trip.cur; trip.cur = trip.next; trip.next = null; trip.fade = 0; if (old.clip && old.clip !== trip.cur.clip) old.clip.el.pause(); }
+    if (trip.fade >= 1) { const old = trip.cur; trip.cur = trip.next; trip.next = null; trip.fade = 0; if (old.clip && old.clip !== trip.cur.clip) old.clip.el.pause(); creditFor(trip.cur.clip); }
   } else if (viz.t > trip.switchAt || (viz.kick > .95 && viz.t > trip.switchAt - 2.5)) {
     trip.next = chooseNext(); if (trip.next.clip) trip.next.clip.el.play().catch(() => {});
     trip.fade = 0; trip.fadeDur = viz.kick > .95 ? .14 : .55; trip.switchAt = viz.t + rand(3.5, 8);
@@ -763,7 +763,7 @@ function frameSun() {
       sun.clips.filter((c) => !c.el).slice(0, 2).forEach(loadMonkey);
       if (ready.length) {
         const c = ready[Math.floor(Math.random() * ready.length)];
-        sun.prev = sun.cur; sun.cur = c; sun.last = sun.clips.indexOf(c); sun.fade = 0;
+        sun.prev = sun.cur; sun.cur = c; sun.last = sun.clips.indexOf(c); sun.fade = 0; creditFor(c);
         c.el.currentTime = 0; c.el.play().catch(() => {});
         burnAt(Math.random() < .5 ? -1 : 1);
         sun.switchAt = viz.t + rand(6.5, 9.5);
@@ -834,18 +834,8 @@ $('devForm').onsubmit = async (e) => {
   } catch (err) { $('devMsg').textContent = err.message; }
 };
 
-// who made the footage (the licences ask us to say so)
-$('creditsBtn').onclick = async () => {
-  const list = $('creditList'); list.innerHTML = '';
-  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const add = (html) => { const li = document.createElement('li'); li.innerHTML = html; list.append(li); };
-  add('music, words and miko: ours.');
-  for (const [file, song] of [['video/credits.json', 'WHERE DOES LIFE GO?'], ['video/monkey/credits.json', 'BABY MONKEY']]) {
-    try { (await (await fetch(file)).json()).forEach((c) => add(`<i>${song}</i> · ${esc(c.title)} — ${esc(c.author)}, ${esc(c.license)}${c.source_url ? ` · <a href="${esc(c.source_url)}" target="_blank" rel="noopener">source</a>` : ''}`)); } catch {}
-  }
-  $('credits').hidden = false;
-};
-$('creditsClose').onclick = () => { $('credits').hidden = true; };
+// who filmed the clip on screen: a small credit in the corner while it plays (the licences ask for it)
+function creditFor(clip) { $('clipCredit').textContent = clip ? `film: ${clip.author}, ${clip.license}` : ''; }
 
 /* ---------------- IM SO LONELY: one light ----------------
    A dark night, and one warm light far away, with its reflection on the wet ground. Fine rain
@@ -1070,7 +1060,6 @@ async function ping() {
     clockSkew = r.now - (sent + Date.now()) / 2;   // trust the server's clock, not this device's
     others = Math.max(0, r.peers - 1);                                   // the people here with you, right now
     peersText = others ? `${words(Math.min(others, 99))} ${others === 1 ? 'other person is' : 'others are'} listening right now.` : '';
-    const pl = $('peersLine'); if (pl) { pl.textContent = peersText; pl.hidden = !others; pl.classList.add('on'); }
     tick();
   } catch {}
 }
